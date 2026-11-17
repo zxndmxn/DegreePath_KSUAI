@@ -1,0 +1,13 @@
+{
+  "name": "degreepath-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4173 --strictPort",
+    "build": "tsc && vite build",
+    "test": "npm run build && node --test tests/planner.test.mjs",
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort"
+  },
+  "devDependencies": {"typescript": "latest", "vite": "latest"}
+}

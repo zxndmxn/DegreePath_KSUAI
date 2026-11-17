@@ -1,0 +1,26 @@
+{
+  "retrievedOn": "2026-11-16",
+  "sourceUrl": "https://campus.kennesaw.edu/current-students/academics/academic-advising/resources/course-forecasts-1.php",
+  "kind": "manual_public_forecast_observation",
+  "warning": "Not course requirements or confirmed sections. Blank and dash have different meanings.",
+  "observations": [
+    {
+      "courseCode": "CS 3305",
+      "FA27": "F/O",
+      "SP28": "F/O",
+      "FA28": null
+    },
+    {
+      "courseCode": "CS 4322",
+      "FA27": "-",
+      "SP28": "F",
+      "FA28": null
+    },
+    {
+      "courseCode": "CS 4622",
+      "FA27": "O",
+      "SP28": "-",
+      "FA28": null
+    }
+  ]
+}

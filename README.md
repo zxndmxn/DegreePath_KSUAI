@@ -38,7 +38,7 @@ npm run build
 npm run preview
 ```
 
-Tests check TypeScript, build, and five scheduling cases covering 270 supported scenario combinations. Build output goes to ignored dist/. Dev and preview use the same port; stop one before starting the other.
+Tests check TypeScript/build, five scheduling cases covering 270 supported scenario combinations, and the new normalized-import/data-fixture checks. Build output goes to ignored dist/. Dev and preview use the same port; stop one before starting the other.
 
 | File | Responsibility |
 | --- | --- |
@@ -58,3 +58,13 @@ The greedy scheduler assumes every course runs each fall/spring, prerequisites f
 OR prerequisites, corequisites, grades, elective allocation, residency, transfer evaluation, admission gates, real offerings, section conflicts, and advisor exceptions are not modeled. No student data is transmitted. Fonts use the local system.
 
 Confirm event rules, AI requirements, and pre-existing-code policy before a competition submission.
+
+## Data pipeline work
+
+The website still runs the original fictional 18-course planner. New contracts, mock records, and normalized-JSON intake are development foundations and are not connected to the UI.
+
+- [Data pipeline research and architecture](docs/data-pipeline.md)
+- [Task status and next actions](docs/task-status.md)
+- [Data packs and their limitations](data/README.md)
+
+The target is all current KSU programs. A 291-entry public directory inventory is included for discovery; no real program is yet advertised as reviewed/schedulable. The synthetic integration pack includes 48 invented courses, three programs, six students, and 576 offering records.

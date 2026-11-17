@@ -9,6 +9,11 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 let theme = (() => { try { return localStorage.getItem('degreepath.theme') ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch { return 'light'; } })();
 document.documentElement.dataset.theme = theme;
 let editorOpen = false;
+const navIcons = [
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 20V4m0 7h8a4 4 0 0 0 4-4V4M6 14h8a4 4 0 0 1 4 4v2"/></svg>',
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4Z"/></svg>'
+];
 const moon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></svg>';
 const sun = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/></svg>';
 let creditLimit = 15;
@@ -39,7 +44,7 @@ function courseCard(c: Course, index: number, baseline: ReturnType<typeof plan>)
   const selected = editorOpen && c.id === selectedId;
   return `<button class="course area-${c.area.toLowerCase()} ${selected ? 'selected' : ''} ${moved ? 'moved' : ''}" data-course="${c.id}" aria-label="Explore impact: ${c.title}" aria-haspopup="dialog">
     <span class="course-top"><span>${c.code}</span><span class="course-open" aria-hidden="true">${arrow}</span></span>
-    <span class="course-title">${c.title}</span><span class="course-bottom"><span>${c.credits} credits <span class="dot">·</span> ${c.area}</span>${moved ? '<span class="course-state">Moved</span>' : '<span class="course-edit">Explore</span>'}</span>
+    <span class="course-title">${c.title}</span><span class="course-bottom"><span class="course-credit" title="${c.area}">${c.credits} cr</span>${moved ? '<span class="course-state">Moved</span>' : '<span class="course-edit">Explore</span>'}</span>
   </button>`;
 }
 function render() {
@@ -52,23 +57,21 @@ function render() {
   const changed = courses.filter(c => result.placements[c.id] !== baseline.placements[c.id]).length;
   const complete = result.finish !== null;
   app.innerHTML = `
-    <header class="topbar"><a href="#" class="brand" aria-label="DegreePath home"><span class="brand-mark">${branch}</span>Degree<span>Path</span></a>
-      <nav aria-label="Main navigation">${[['plan', 'My plan'], ['compare', 'Compare paths'], ['saved', 'Saved plans']].map(([id, label]) => `<button data-view="${id}" class="nav-link ${view === id ? 'active' : ''}" ${view === id ? 'aria-current="page"' : ''}>${label}${id === 'saved' && saved.length ? `<span class="count">${saved.length}</span>` : ''}</button>`).join('')}</nav>
-      <div class="profile"><span class="demo-pill">SAMPLE DATA</span><span class="theme-control"><span class="theme-end" aria-hidden="true">${sun}</span><button id="theme-toggle" class="theme-switch" role="switch" aria-label="Dark mode" aria-checked="${theme === 'dark'}"><span class="switch-thumb"></span></button><span class="theme-end" aria-hidden="true">${moon}</span></span></div>
-    </header>
-
-    <main>
-      <div class="page-heading"><div><h1>${view === 'compare' ? 'Compare your next chapter.' : view === 'saved' ? 'Your saved plans.' : 'Make room for what’s next.'}</h1></div><div class="program-chip"><span class="program-symbol">${branch}</span><div><strong>Computing B.S.</strong><small>Sample curriculum</small></div></div></div>
+    <div class="sample-banner">Sample curriculum <span>·</span> Independent student prototype</div>
+    <aside class="sidebar"><a href="#" class="brand" aria-label="DegreePath home"><span class="brand-mark">${branch}</span><span>DegreePath<small>KSU AI HACKATHON</small></span></a><div class="nav-category">ACADEMIC PLANNING</div><nav aria-label="Main navigation">${[['plan', 'My plan'], ['compare', 'Compare paths'], ['saved', 'Saved plans']].map(([id, label],i) => `<button data-view="${id}" class="nav-link ${view === id ? 'active' : ''}" ${view === id ? 'aria-current="page"' : ''}>${navIcons[i]}<span>${label}</span>${id === 'saved' && saved.length ? `<span class="count">${saved.length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><span class="sidebar-label">YOUR DEGREE</span><strong>Computing B.S.</strong><span>60 of 120 credits completed</span><div class="sidebar-progress"><i></i></div><span class="sidebar-footnote">Fictional sample · No KSU connection</span></div></aside>
+    <header class="topbar"><div class="program-context">${branch}<span>PROGRAM</span><strong>Computing B.S.</strong><span class="catalog-label">Sample catalog</span></div><div class="profile"><span class="mode-label">Appearance</span><span class="theme-control"><span class="theme-end" aria-hidden="true">${sun}</span><button id="theme-toggle" class="theme-switch" role="switch" aria-label="Dark mode" aria-checked="${theme === 'dark'}"><span class="switch-thumb"></span></button><span class="theme-end" aria-hidden="true">${moon}</span></span></div></header>
+    <main><div class="page-heading"><div><div class="eyebrow">DEGREEPATH / ${view === 'compare' ? 'EXPLORE' : view === 'saved' ? 'YOUR OPTIONS' : 'OVERVIEW'}</div><h1>${view === 'compare' ? 'COMPARE PATHS' : view === 'saved' ? 'SAVED PLANS' : 'MY DEGREE PLAN'}</h1></div>${view === 'plan' ? `<button id="new-scenario" class="primary-button">${branch} Explore a change</button>` : ''}</div>
       <div class="notice" role="status" aria-live="polite">${escape(notice)}</div>
       ${view === 'plan' ? `
       <section class="summary-grid" aria-label="Plan summary">
-        <div class="summary-card progress-summary"><div class="progress-ring"><span>50<small>%</small></span></div><div><span class="summary-label">Your progress</span><strong>60 <span>/ 120 credits</span></strong><small>18 courses remaining</small></div></div>
-        <div class="summary-card"><span class="summary-label">${scenario ? 'Scenario estimated finish' : 'Estimated finish'}</span><strong>${complete ? result.finish : 'Route incomplete'}</strong><small>${!complete ? 'A required course is excluded.' : scenario ? delta > 0 ? `${delta} semester${delta === 1 ? '' : 's'} later than your baseline` : delta < 0 ? `${-delta} semesters earlier than your baseline` : 'Same finish as your baseline' : `${baseline.terms.length} semesters remaining · fall & spring`}</small></div>
-        <div class="summary-card workload"><label class="summary-label" for="credits">Your semester pace</label><div><select id="credits">${[12, 15, 18].map(n => `<option value="${n}" ${creditLimit === n ? 'selected' : ''}>${n} credits</option>`).join('')}</select><span class="soft-icon">≋</span></div><div class="pace-bars" aria-hidden="true">${[12,15,18].map(n => `<i class="${n <= creditLimit ? 'filled' : ''}"></i>`).join('')}</div></div>
+        <div class="summary-card"><span class="summary-label">COMPLETED CREDITS</span><strong>60 <span>/ 120</span></strong><div class="metric-progress"><i></i></div></div>
+        <div class="summary-card"><span class="summary-label">COURSES REMAINING</span><strong>18</strong><small>60 credits to complete</small></div>
+        <div class="summary-card"><span class="summary-label">${scenario ? 'WHAT-IF FINISH' : 'ESTIMATED FINISH'}</span><strong class="finish-value">${complete ? result.finish : 'Incomplete'}</strong><small>${!complete ? 'Required course excluded' : scenario ? delta > 0 ? `+${delta} semester${delta === 1 ? '' : 's'} vs. baseline` : delta < 0 ? `${delta} semesters vs. baseline` : 'No change to finish' : `${baseline.terms.length} semesters · fall / spring`}</small></div>
+        <div class="summary-card workload"><label class="summary-label" for="credits">SEMESTER PACE</label><select id="credits">${[12, 15, 18].map(n => `<option value="${n}" ${creditLimit === n ? 'selected' : ''}>${n} credits</option>`).join('')}</select><small>Maximum credits per term</small></div>
       </section>
       <div class="workspace"><section class="timeline-section" aria-labelledby="timeline-heading">
         <div class="roadmap-toolbar"><div><h2 id="timeline-heading">Semester roadmap</h2><span class="roadmap-subtitle">${active.terms.length} semesters <span>·</span> ${timeline === 'baseline' ? 'Original plan' : scenario ? 'Changes highlighted' : 'Choose a course to start'}</span></div><div class="plan-controls" role="group" aria-label="Displayed plan"><button data-timeline="baseline" class="${timeline === 'baseline' ? 'active' : ''}" aria-pressed="${timeline === 'baseline'}">${check}<span>Baseline</span></button><button data-timeline="scenario" class="${timeline === 'scenario' ? 'active' : ''}" aria-pressed="${timeline === 'scenario'}">${branch}<span>What-if plan</span>${scenario ? '<i class="change-dot"></i>' : ''}</button></div></div>
-        <div class="roadmap-tip"><span>${branch} Click any course to change its path</span><span class="roadmap-legend"><i></i> ${scenario && timeline === 'scenario' ? 'Amber = moved' : '60 credits remaining'}</span></div>
+        <div class="roadmap-tip"><span>${branch} Click any course to change its path</span><span class="roadmap-legend">${scenario && timeline === 'scenario' ? 'Gold marks a moved course' : '18 courses / 60 credits'}</span></div>
         ${scenario ? `<div class="scenario-strip"><span>${branch}<strong>${scenario.action === 'defer' ? 'Taking it later' : 'Exploring without it'}:</strong> ${courses.find(c => c.id === scenario!.courseId)!.title}${scenario.action === 'defer' ? ` · no earlier than ${termLabel(baseline.placements[scenario.courseId] + scenario.delay)}` : ''}</span><button id="reset">Reset plan <span aria-hidden="true">↺</span></button></div>` : ''}
         <div class="terms">${active.terms.map(t => `<section class="term"><header><div><span class="term-number">${String(t.index + 1).padStart(2, '0')}</span><h3>${t.label}</h3></div><span>${t.credits} / ${creditLimit} cr</span></header><div class="term-meter" aria-hidden="true" style="--load:${100*t.credits/creditLimit}%"></div><div class="term-courses">${t.courses.length ? t.courses.map(c => courseCard(c, t.index, baseline)).join('') : '<p class="empty-term">Room to breathe.<br>Waiting for prerequisites.</p>'}</div></section>`).join('')}</div>
         ${active.blocked.length ? `<section class="blocked-box"><h3>Blocked requirements · ${active.blocked.length} courses</h3><p>This degree cannot be completed without the excluded mandatory course. No substitutions are modeled.</p><div>${active.blocked.map(c => `<button data-course="${c.id}"><strong>${c.title}</strong><span>Blocked ${c.id === scenario?.courseId ? '· excluded' : '· prerequisite unavailable'}</span></button>`).join('')}</div></section>` : ''}
@@ -112,6 +115,7 @@ function setScenario(action: 'defer' | 'exclude') {
   timeline = 'scenario'; notice = ''; render();
 }
 function bind() {
+  app.querySelector<HTMLButtonElement>('#new-scenario')?.addEventListener('click', () => { editorOpen = true; render(); });
   const themeButton = app.querySelector<HTMLButtonElement>('#theme-toggle');
   if (themeButton) themeButton.onclick = () => { theme = theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = theme; try { localStorage.setItem('degreepath.theme', theme); } catch {} render(); app.querySelector<HTMLElement>('#theme-toggle')?.focus(); };
   const closeEditor = () => { editorOpen = false; render(); app.querySelector<HTMLElement>(`[data-course="${selectedId}"]`)?.focus({preventScroll:true}); };

@@ -24,9 +24,12 @@ This repository is private. The owner invites teammates through Settings → Col
 1. Open My plan. The 15-credit baseline finishes Fall 2029.
 2. Click anywhere on Calculus II. Keyboard users can focus a card and press Enter.
 3. Choose Take it later; the default two-semester deferral moves the estimate to Spring 2030.
-4. Choose Done, then compare Baseline and What-if plan.
-5. Reopen the course, choose Save this plan, and restore it from Saved plans after a reload.
-6. Explore without it shows blocked requirements. Compare paths contains fictional examples with unevaluated credit fit.
+4. Choose Create roadmap, then compare Baseline and What-if plan. Use next/previous semester and course controls to reach longer lists without clipping.
+5. Semester chips list courses immediately. Edit another class to accumulate changes; Undo removes only that class's edit.
+6. Save plan locally, then restore the complete scenario from Saved plans after reloading. Older single-course saves still load.
+7. Result and Connections are separate editor views. Blocked requirements open from View requirements. Compare paths computes baseline-versus-scenario results; degree previews remain unevaluated.
+
+See [the solo walkthrough](docs/demo-run.md) for exact clicks, expected results and feedback capture. The finish-transition arrow animates on hover/keyboard focus and respects reduced-motion preferences.
 
 The top-right switch controls light/dark mode. Saved plans and theme preference stay in the current browser; they do not sync between teammates. Unsaved changes reset on reload.
 
@@ -38,7 +41,7 @@ npm run build
 npm run preview
 ```
 
-Tests check TypeScript/build, five scheduling cases covering 270 supported scenario combinations, and the new normalized-import/data-fixture checks. Build output goes to ignored dist/. Dev and preview use the same port; stop one before starting the other.
+The 22 tests check TypeScript/build, 270 single-course scenario combinations, accumulated constraints and per-course undo, local scenario serialization, planned coverage, partial-schedule regression, and normalized-import/data fixtures. Build output goes to ignored dist/. Dev and preview use the same port; stop one before starting the other.
 
 | File | Responsibility |
 | --- | --- |
@@ -54,6 +57,10 @@ Tests check TypeScript/build, five scheduling cases covering 270 supported scena
 The fictional Computing B.S. starts Spring 2027 with 60 summarized earned credits and 18 remaining courses totaling 60 credits. Only Calculus I and Programming I are individually modeled as completed prerequisites. Codes and requirements are invented.
 
 The greedy scheduler assumes every course runs each fall/spring, prerequisites finish in earlier terms, and all modeled courses are mandatory. Deferral means no earlier than baseline placement plus 1–4 terms. Baseline and scenario share the 12/15/18-credit cap. Results are not guaranteed to be the earliest possible finish.
+
+Multiple course constraints are supported. Excluding Programming II alone leaves two schedulable semesters and 12 blocked requirements. Excluding both Calculus II and Programming II leaves only Spring 2027, four available courses (13 credits), and 14 blocked requirements. This is a **partial schedule**, never a one-semester degree.
+
+Coverage counts earned plus planned credits through the original finish date; earned credits remain 60. The displayed percentage controls the red/orange/yellow coverage-bar color. The roadmap action separately reflects disruption. At laptop sizes, paging keeps course/semester/edit lists accessible without clipped rows; no unsupported degree data is silently filled in.
 
 OR prerequisites, corequisites, grades, elective allocation, residency, transfer evaluation, admission gates, real offerings, section conflicts, and advisor exceptions are not modeled. No student data is transmitted. Fonts use the local system.
 

@@ -3,7 +3,18 @@ export interface Course {
   prerequisites: string[]; area: 'Major' | 'Core' | 'Elective';
 }
 export type Action = 'defer' | 'exclude';
-export interface Scenario { courseId: string; action: Action; delay: number; creditLimit: number }
+export interface CourseChange { courseId: string; action: Action; delay: number }
+export interface Scenario extends CourseChange { creditLimit: number; changes?: CourseChange[] }
+export function scenarioChanges(scenario?: Scenario): CourseChange[] {
+  return scenario ? scenario.changes ?? [{ courseId: scenario.courseId, action: scenario.action, delay: scenario.delay }] : [];
+}
+export function updateCourseChange(scenario: Scenario | undefined, change: CourseChange, creditLimit: number): Scenario {
+  return { ...change, creditLimit, changes: [...scenarioChanges(scenario).filter(item=>item.courseId!==change.courseId), {...change}] };
+}
+export function removeCourseChange(scenario: Scenario, courseId: string): Scenario | undefined {
+  const changes = scenarioChanges(scenario).filter(item=>item.courseId!==courseId);
+  return changes.length ? {...changes.at(-1)!, creditLimit:scenario.creditLimit, changes} : undefined;
+}
 export interface Term { index: number; label: string; courses: Course[]; credits: number }
 export interface Plan { terms: Term[]; blocked: Course[]; placements: Record<string, number>; finish: string | null }
 export const completed = ['calc1', 'prog1'];
@@ -43,10 +54,11 @@ export function dependencies(id: string): { direct: Course[]; downstream: Course
 }
 export function plan(creditLimit = 15, scenario?: Scenario): Plan {
   if (![12, 15, 18].includes(creditLimit)) throw new Error('Choose a 12, 15, or 18 credit limit.');
-  if (scenario && (!courses.some(c => c.id === scenario.courseId) || !['defer', 'exclude'].includes(scenario.action)
-    || !Number.isInteger(scenario.delay) || scenario.delay < 1 || scenario.delay > 4)) throw new Error('Invalid scenario.');
+  const changes = scenarioChanges(scenario);
+  if ((scenario && !changes.length) || changes.length > courses.length || new Set(changes.map(c=>c.courseId)).size !== changes.length || changes.some(change => !courses.some(c => c.id === change.courseId) || !['defer', 'exclude'].includes(change.action)
+    || !Number.isInteger(change.delay) || change.delay < 1 || change.delay > 4)) throw new Error('Invalid scenario.');
   const baseline = scenario ? plan(creditLimit) : undefined;
-  const earliest = scenario?.action === 'defer' ? baseline!.placements[scenario.courseId] + scenario.delay : 0;
+  const constraints = new Map(changes.map(change=>[change.courseId, {...change, earliest: change.action === 'defer' ? baseline!.placements[change.courseId] + change.delay : 0}]));
   const placements: Record<string, number> = {};
   const terms: Term[] = [];
   const earned = new Set(completed);
@@ -55,7 +67,8 @@ export function plan(creditLimit = 15, scenario?: Scenario): Plan {
     const selected: Course[] = [];
     let credits = 0;
     for (const c of remaining) {
-      if (c.id === scenario?.courseId && (scenario.action === 'exclude' || index < earliest)) continue;
+      const constraint = constraints.get(c.id);
+      if (constraint && (constraint.action === 'exclude' || index < constraint.earliest)) continue;
       if (credits + c.credits <= creditLimit && c.prerequisites.every(p => earned.has(p))) {
         selected.push(c); credits += c.credits; placements[c.id] = index;
       }
@@ -63,7 +76,7 @@ export function plan(creditLimit = 15, scenario?: Scenario): Plan {
     terms.push({ index, label: termLabel(index), courses: selected, credits });
     for (const c of selected) earned.add(c.id);
     remaining = remaining.filter(c => !earned.has(c.id));
-    if (!selected.length && !(scenario?.action === 'defer' && index < earliest)) break;
+    if (!selected.length && !remaining.some(c=>{const constraint=constraints.get(c.id); return constraint?.action === 'defer' && index < constraint.earliest;})) break;
   }
   while (terms.length && !terms.at(-1)!.courses.length) terms.pop();
   return { terms, placements, blocked: remaining, finish: remaining.length ? null : terms.at(-1)?.label ?? null };

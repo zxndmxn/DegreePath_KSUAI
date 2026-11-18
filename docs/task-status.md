@@ -1,6 +1,36 @@
 # DegreePath task status
 
-Updated November 16, 2026. Scope: **all current KSU degrees/programs**, plus the catalog versions applicable to supported students. Owners for unfinished work are not assigned yet. This file is the shared task tracker; update status and evidence when a task changes.
+Updated November 18, 2026. Scope: **all current KSU degrees/programs**, plus the catalog versions applicable to supported students. Owners for unfinished work are not assigned yet. This file is the shared task tracker; update status and evidence when a task changes.
+
+## November 18 UI checks
+
+- [x] **UI-06 · Done** — Circular finish-transition arrow animates on hover/focus with reduced-motion support; coverage strips resized to an intermediate scale.
+- [x] **FIT-01 · Done** — Laptop My Plan uses viewport-sized semester/course pages; centered editor separates Result and Connections and pages longer course/edit lists. At 1280×720, page height matches viewport and tested course titles are not clipped; reported three-edit result fits both editor panes without overflow.
+- [x] **QA-05 · Done** — 22 tests pass, including the explicit Calculus II + Programming II exclusion regression: one partial semester, 13 scheduled credits, 14 blocked requirements, no finish date.
+- [x] **DEMO-03 · Done** — Rewrote vault `_demoRun.md` as a line-by-line solo review and included the team copy at `docs/demo-run.md`. Covers pagination, hover/focus arrow, multi-course persistence, standalone versus combined exclusions and partial schedules.
+
+- [x] **UI-05 · Done** — Visible semester chips and course rows; logo actions without Explore text; simpler Result panel; compact My Plan; larger coverage bars colored by percentage (red/orange/yellow).
+- [x] **SCHED-04 · Done for synthetic graph** — Multiple per-course defer/exclude constraints; changing one retains others; individual undo; combined saves with legacy single-save support. Real-program rules remain unverified.
+- [x] **QA-04 · Done** — 21 tests pass. Browser verified accumulated edits, individual undo, combined save-refresh-restore, requirements popover, compact layout, light/dark and 390px-wide list controls.
+
+- [x] **UI-04 · Done** — Centered two-column editor, semester picker, prominent live outcomes/connections, favicon and phone-width summary.
+- [x] **IMPACT-01 · Done** — Date-bounded planned-coverage calculation, cumulative semester comparisons and original-placement labels. Earned credits stay immutable. Three new tests; 18 total pass.
+- [x] **NAV-01 · Done** — Create roadmap selects What-if and focuses its result; empty What-if preserves baseline until an action exists.
+- [x] **QA-03 · Done** — Browser: Data Structures exclusion (7 blocked / 80%), Computer Networks two-term deferral (Spring 2030 / 97% / 4 placements changed), save-refresh-restore, baseline consistency, semester selection, themes, mobile summary and no captured console errors.
+- [x] **HANDOFF-01 · Done** — Separate Nudox task documented in vault `nudox shit.md`; no installation/authentication/indexing performed. Continue in the user's other chat.
+
+## November 17 research update
+
+- [x] **UI-03 · Done** — Prominent planning entry, visible course Explore labels, stronger view controls, selected-view finish/highlight consistency, and remove Appearance label.
+- [x] **COMPARE-02 · Done** — Calculated sample baseline-versus-scenario comparison and changed-placement list; selectable degree previews remain explicitly unevaluated.
+- [x] **SAVE-01 · Done** — Expose local saving in the roadmap/dialog/comparison; browser save-refresh-restore verified. Reject an eleventh distinct save instead of evicting a previous one. Storage-denied and cap boundary still require manual browser checks.
+- [x] **DEMO-02 · Done** — Vault `_demoRun.md`: Point / Click / Say script, expected results, edge checks, known limitations and issue-capture table.
+
+- [x] **RES-02 · Done** — Static review of Aaryan Kapoor's school CLIs and It documentation/license. See `../../aaryan-resources-review-2026-11-17.md`.
+- [ ] **IMPORT-05 · Needs evidence** — Inspect a consented, redacted raw KSU audit/course JSON sample; preserve nested alternatives, attempts, transfers and prerequisite logic. His CLI source establishes an access approach, not a verified integration in our app.
+- [ ] **LOOP-01 · Next** — Complete select course → propose change → calculate → highlight/explain impact → undo, with revision checks and independently reviewed expected results.
+- **Priority change:** investigate structured JSON before PDF layout parsing; keep PDF/manual input as fallback routes.
+- **AI boundary:** translate preferences into editable constraints and explain engine results. Do not let generated text decide academic eligibility.
 
 Statuses: **Done**, **Next**, **Planned**, **Needs evidence**. A completed research/data-contract task does not mean the corresponding user-facing feature works.
 

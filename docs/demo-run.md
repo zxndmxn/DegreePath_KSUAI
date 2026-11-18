@@ -1,12 +1,58 @@
 # DegreePath — my solo demo run
 
-**Current revision: November 18, 2026 · viewport layout, visible choices, multi-course edits.**
+**Current revision: November 18, 2026 · It agent companion + calculated route options.**
 
 **App:** http://127.0.0.1:4173/
 
 Go line by line. Tick an action only after you try it. This is your personal critique run, not a meeting script. Stop and tell me whenever anything feels wrong; you don't have to finish first.
 
 Earlier checkmarks and comments are preserved in [[DegreePath/archive/demoRun-before-viewport-walkthrough-2026-11-18|the previous note]]. New checks below are deliberately unchecked.
+
+## New run — compare routes with the agent
+
+Do this first for the new feature. The full My plan/editor/save review follows below. This is your own critique run, not a presentation.
+
+**App:** http://127.0.0.1:4173/ · **It companion:** http://localhost:4700/p/degreepath-agent
+
+### A. Find it and carry your edits across
+
+- [ ] **Point:** My plan, beside Explore a change. **Click:** Compare options. **Say to yourself:** “Can I tell this compares routes?” A new comparison tab should carry my credit limit and every course edit.
+- [ ] **Click:** Lighter semesters → Earlier finish → Compare both. The active goal should be obvious. Changing preferences must clear old results, rather than leave a stale explanation.
+- [ ] **Point:** Try a case. **Click:** On track → Compare calculated routes. Expect 15 credits = Fall 2029 / 100%; 12 = Spring 2030 / 97%; 18 = Fall 2029 / 100%. Coverage is measured by the original Fall 2029 finish.
+- [ ] **Point:** status sentence. **Say:** “This is a local calculation, not an AI answer.” Free text must not silently override requirements.
+- [ ] **Click:** Delay Calculus II. **Type:** “I want a lighter workload. Does taking more credits actually avoid this prerequisite delay?” **Click:** Continue in It. Expect the It page to open with Calculus II / two terms later AND my context retained.
+- [ ] If It needs browser pairing, tell Codex. Pair locally; never put invitation tokens into Git or public messages.
+
+### B. Ask and challenge the answer
+
+- [ ] **Point:** It workspace · two-way actions. **Click:** Ask agent to compare. Calculated cards should appear immediately, with a clear queued state while the agent reviews.
+- [ ] Expect all three credit limits to show **Spring 2030**, **7 semesters**, **0 blocked**, **97% by original finish**. More capacity does not bypass this prerequisite chain.
+- [ ] **Point:** Agent explanation when it arrives. **Say:** “Does it explain why the dates are the same and acknowledge the sample assumptions?” It must describe these calculations, not invent eligibility or claim the globally best schedule.
+- [ ] **Setup catch:** Codex's add-on still needs a restart/hook review before automatic delivery is verified. Keep this chat open. If the request remains queued, tell Codex **“answer the latest DegreePath It request”**; it can read and answer the actual action manually. A queued request is pending; a local preview is not an agent reply.
+- [ ] After an answer, **click:** Lighter semesters. Previous cards/explanation should clear. **Type:** more context. The cursor must stay stable; old answers must not reappear over new edits.
+- [ ] **Click:** Ask agent to compare again. The feasible 12-credit option should sort first. Dates must still match the engine.
+- [ ] On the 12-credit card, **click:** Use in My plan. Expect a new tab showing **12 credits**, the same Calculus II deferral, What-if selected and the card's finish date. Opening a route does not save it automatically.
+- [ ] **Click:** Save plan locally → Saved plans. Refresh and reopen it. Both credit limit and edits should survive, with other saved plans untouched.
+
+### C. A broken route must not become fake graduation
+
+- [ ] Return to It. **Click:** Exclude Programming II → Preview locally. Expect **four options over two pages**; the first page shows three.
+- [ ] **Point:** Restore excluded courses. It must explicitly restore Programming II: Fall 2029 / 6 semesters / 0 blocked / 100%. This changes the exclusion; it is not graduation without the course.
+- [ ] **Point:** Standard pace, exclusion retained. Expect **Incomplete**, **2 partial terms**, **12 blocked**, **67%**. No graduation date.
+- [ ] **Click:** More options. The 18-credit exclusion also stays incomplete. Previous options returns to the first three cards.
+- [ ] On the 15-credit incomplete card, **click:** Use in My plan. Expect **2 schedulable semesters**, **12 requirements blocked**, and Programming II excluded. This is a partial schedule.
+- [ ] **Click:** View result and inspect blocked requirements. **Say:** “Can I understand the failure without hunting?” Check Connections too.
+- [ ] Back in It, open the restoration candidate. Expect baseline with Programming II retained, without silently overwriting saved plans.
+
+### D. Find the rough edges
+
+- [ ] At 100% laptop zoom, are goal, compare, route and return controls easy to find? Is the explanation prominent enough?
+- [ ] Start Compare options from a plan with **two edits**. Do both arrive? A preset intentionally replaces the draft with its labeled example.
+- [ ] Refresh It after changing context/goal: the latest draft should remain. An old handoff must not overwrite the newer draft; an old answer must not attach to a new request.
+- [ ] Ordinary local comparison works without the It connection. If It is unavailable, Continue in It should report a clear failure, not hang or claim success.
+- [ ] Report issues as **section → click → expected → actual → screenshot**, including credit limit and active course edits.
+
+**Still absent:** real DegreeWorks/D2L import, verified KSU requirements/offerings, arbitrary add/replace and a hosted AI backend. Nudox stays in the other chat.
 
 ## 0. Start safely — exactly where to click
 

@@ -2,6 +2,7 @@ import './style.css';
 import { courses, dependencies, plan, termLabel, scenarioChanges, updateCourseChange, removeCourseChange } from './planner';
 import type { Scenario, Course } from './planner';
 import { describeImpact, projectedCreditsThrough, coveragePercent, coverageColor } from './impact';
+import {parseRouteFragment,scenarioForRoute,type RouteRequest} from './route-options';
 
 const branch = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 19V5m0 10c0-5 12-2 12-10"/><circle cx="6" cy="4" r="2.2"/><circle cx="18" cy="4" r="2.2"/><circle cx="6" cy="20" r="2.2"/></svg>`;
 const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>`;
@@ -31,6 +32,19 @@ let timeline: 'baseline' | 'scenario' = 'baseline';
 let comparisonView: 'scenario' | 'degrees' = 'scenario';
 let selectedDegree = 0;
 let notice = '';
+try {
+  const imported=parseRouteFragment(location.hash);
+  if(imported){
+    creditLimit=imported.creditLimit;scenario=scenarioForRoute(creditLimit,imported.changes);
+    timeline=scenario?'scenario':'baseline';selectedId=scenario?.courseId??'calc2';
+    notice='Calculated route opened. Review it here, then save locally if you want to keep it.';
+    history.replaceState(null,'',location.pathname+location.search);
+  }
+}catch{notice='That route link is invalid. Your original sample plan is shown.';}
+function agentHref(){
+  const request:RouteRequest={requestId:crypto.randomUUID(),revision:0,dataset:'degreepath.sample.v1',creditLimit,changes:scenarioChanges(scenario),goal:'balanced',context:''};
+  return 'agent.html#request='+encodeURIComponent(JSON.stringify(request));
+}
 let storageAvailable = true;
 interface Saved { id: string; name: string; date: string; scenario: Scenario }
 const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -132,7 +146,7 @@ function render() {
     <div class="sample-banner">Sample curriculum <span>·</span> Independent student prototype</div>
     <aside class="sidebar"><a href="#" class="brand" aria-label="DegreePath home"><span class="brand-mark">${branch}</span><span>DegreePath<small>KSU AI HACKATHON</small></span></a><div class="nav-category">ACADEMIC PLANNING</div><nav aria-label="Main navigation">${[['plan', 'My plan'], ['compare', 'Compare paths'], ['saved', 'Saved plans']].map(([id, label],i) => `<button data-view="${id}" class="nav-link ${view === id ? 'active' : ''}" ${view === id ? 'aria-current="page"' : ''}>${navIcons[i]}<span>${label}</span>${id === 'saved' && saved.length ? `<span class="count">${saved.length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><span class="sidebar-label">YOUR DEGREE</span><strong>Computing B.S.</strong><span>60 of 120 credits completed</span><div class="sidebar-progress"><i></i></div><span class="sidebar-footnote">Fictional sample · No KSU connection</span></div></aside>
     <header class="topbar"><div class="program-context">${branch}<span>PROGRAM</span><strong>Computing B.S.</strong><span class="catalog-label">Sample catalog</span></div><div class="profile"><span class="theme-control"><span class="theme-end" aria-hidden="true">${sun}</span><button id="theme-toggle" class="theme-switch" role="switch" aria-label="Dark mode" aria-checked="${theme === 'dark'}"><span class="switch-thumb"></span></button><span class="theme-end" aria-hidden="true">${moon}</span></span></div></header>
-    <main class="${view==='plan'?'plan-page':''}"><div class="page-heading"><div><div class="eyebrow">DEGREEPATH / ${view === 'compare' ? 'EXPLORE' : view === 'saved' ? 'YOUR OPTIONS' : 'OVERVIEW'}</div><h1>${view === 'compare' ? 'COMPARE PATHS' : view === 'saved' ? 'SAVED PLANS' : 'MY DEGREE PLAN'}</h1></div>${view === 'plan' ? `<button id="new-scenario" class="primary-button">${branch} Explore a change</button>` : ''}</div>
+    <main class="${view==='plan'?'plan-page':''}"><div class="page-heading"><div><div class="eyebrow">DEGREEPATH / ${view === 'compare' ? 'EXPLORE' : view === 'saved' ? 'YOUR OPTIONS' : 'OVERVIEW'}</div><h1>${view === 'compare' ? 'COMPARE PATHS' : view === 'saved' ? 'SAVED PLANS' : 'MY DEGREE PLAN'}</h1></div>${view === 'plan' ? `<div class="heading-actions"><a class="done-button" href="${agentHref()}" target="_blank" rel="noopener noreferrer">Compare options ${branch}</a><button id="new-scenario" class="primary-button">${branch} Explore a change</button></div>` : ''}</div>
       <div class="notice" role="status" aria-live="polite">${escape(notice)}</div>
       ${view === 'plan' ? `
 

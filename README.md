@@ -2,7 +2,9 @@
 
 A student-first degree-path simulator for the KSU AI hackathon. Change a course decision, compare its impact on your semester plan, and save alternatives.
 
-**Current state:** a working local prototype with fictional data. No KSU connection or official academic audit. Real requirements, student imports, offerings, program comparison, and AI are planned work.
+**Current state:** a working local prototype with fictional data, multi-course scenarios, route comparisons and an optional local It/Codex companion. No KSU connection or official academic audit. Real requirements, student imports, offerings and cross-program evaluation remain unfinished. The browser does not contain a hosted AI model.
+
+**New:** My plan → **Compare options** compares 12/15/18-credit routes using the same scheduler. **Continue in It** passes the current sample edits to the locally installed workspace; **Ask agent to compare** queues a request and displays the agent's returned explanation. See [setup and limitations](docs/it-integration.md) and [solo walkthrough](docs/demo-run.md).
 
 ## Run locally
 

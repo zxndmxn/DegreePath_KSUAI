@@ -7,7 +7,9 @@
     "dev": "vite --host 127.0.0.1 --port 4173 --strictPort",
     "build": "tsc && vite build",
     "test": "npm run build && node --test tests/*.test.mjs",
-    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort"
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "build:it": "tsc && vite build --base ./ && node scripts/prepare-it.mjs",
+    "routes": "node scripts/compare-routes.mjs"
   },
   "devDependencies": {
     "typescript": "latest",

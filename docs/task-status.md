@@ -4,6 +4,15 @@ Updated November 18, 2026. Scope: **all current KSU degrees/programs**, plus the
 
 ## November 18 UI checks
 
+- [x] **IT-01 · Done locally** — It v0.1.45 installed; localhost companion published; telemetry/network sharing/auto-wake off. Manual service running; no startup task. Runtime/credentials outside Git.
+- [x] **ROUTES-01 · Done for sample** — 12/15/18-credit comparison plus explicit required-course restoration; validated My plan → comparison → It → My plan handoff.
+- [x] **IT-02 · Manual loop verified** — Browser action read by CLI, calculated through the same engine, actual Codex explanation patched back and visibly verified. Request identity/revision/dataset protects newer edits from stale replies.
+- [ ] **IT-03 · Pending user setup** — Review/restart Codex add-on; verify fresh automatic delivery. Add-on reports needs approval. No self-approval or unrelated access changes.
+- [x] **QA-06 · Done** — 26 tests pass; browser checks cover blockers versus restoration, exact scenario handoff, pending/replied states and typing. Foreign-origin/unknown-course handoffs reject without changing state.
+- [x] **DEMO-04 · Done** — Solo walkthrough includes exact It/local controls, three cases, expected results, stale-response checks and manual-agent fallback; setup in `docs/it-integration.md`.
+
+Next: redacted real-audit staging and verified catalog rules. More fictional rows alone do not establish real-program support. Nudox/homelab remains separate.
+
 - [x] **UI-06 · Done** — Circular finish-transition arrow animates on hover/focus with reduced-motion support; coverage strips resized to an intermediate scale.
 - [x] **FIT-01 · Done** — Laptop My Plan uses viewport-sized semester/course pages; centered editor separates Result and Connections and pages longer course/edit lists. At 1280×720, page height matches viewport and tested course titles are not clipped; reported three-edit result fits both editor panes without overflow.
 - [x] **QA-05 · Done** — 22 tests pass, including the explicit Calculus II + Programming II exclusion regression: one partial semester, 13 scheduled credits, 14 blocked requirements, no finish date.

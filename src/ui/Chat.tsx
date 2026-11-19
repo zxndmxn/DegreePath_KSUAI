@@ -3,11 +3,13 @@ import type { DegreePathState } from '../store.ts';
 import { api, type BridgeStatus } from '../api.ts';
 import { applyAction, buildContext, describeAction, groundQuestion, type AgentAction } from '../core/agent.ts';
 import { Icon } from './bits.tsx';
+import { dueWithin, shortDate } from '../core/d2l.ts';
 
 interface Msg { role: 'user' | 'assistant'; content: string; sent?: string; actions?: AgentAction[]; applied?: boolean[]; streaming?: boolean }
 
 const STARTERS = [
   'What do I have left to graduate?',
+  "What's due this week?",
   'What happens if I drop my capstone?',
   'Can I graduate any sooner?',
   'Make my next semester lighter',
@@ -25,7 +27,7 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
   useEffect(() => { if (open && seed) { void send(seed); onSeedUsed(); } }, [open, seed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const p = s.pathway!;
-  const context = s.plan ? buildContext(p, s.plan, s.edits, s.settings, s.catalog, s.baseline?.finish ?? null) : '';
+  const context = s.plan ? buildContext(p, s.plan, s.edits, s.settings, s.catalog, s.baseline?.finish ?? null, dueWithin(s.workload, 30)) : '';
   const [warm, setWarm] = useState<'idle' | 'warming' | 'ready'>('idle');
   useEffect(() => {
     if (!open || !online || !context || busy) return;
@@ -39,7 +41,13 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
   async function send(q: string) {
     const question = q.trim();
     if (!question || busy || !s.plan) return;
-    const fact = groundQuestion(question, p, s.catalog, s.edits, s.settings);
+    const plannerFact = groundQuestion(question, p, s.catalog, s.edits, s.settings);
+    let dueFact: string | null = null;
+    if (s.workload && /\b(due|deadline|assignment|homework|quiz|exam|this week|busy|workload)\b/i.test(question)) {
+      const week = dueWithin(s.workload, 7);
+      dueFact = week.length ? `Due in the next 7 days on D2L: ${week.map(i => `${i.code} ${i.title} (${shortDate(i.due)})`).join('; ')}.` : 'Nothing is due on D2L in the next 7 days.';
+    }
+    const fact = [plannerFact, dueFact].filter(Boolean).join(' ') || null;
     const next: Msg[] = [...msgs, { role: 'user', content: question, sent: fact ? `${question}\n\n[PLANNER RESULT, verified, restate it: ${fact}]` : question }];
     setMsgs(next); setText(''); setBusy(true);
     try {

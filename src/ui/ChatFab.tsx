@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { DegreePathState } from '../store.ts';
 import { Icon } from './bits.tsx';
+import { dueWithin } from '../core/d2l.ts';
 
 type View = 'progress' | 'roadmap' | 'compare' | 'plans';
 interface Hint { text: string; ask?: string }
@@ -10,6 +11,8 @@ function hintsFor(view: View, s: DegreePathState): Hint[] {
   const out: Hint[] = [];
   const blocked = s.plan?.blocked[0];
   if (blocked) out.push({ text: `${blocked.code} can't be placed right now. Want to know why?`, ask: `Why can't ${blocked.code} be scheduled, and how do I fix it?` });
+  const week = dueWithin(s.workload, 7);
+  if (week.length) out.push({ text: `${week.length} thing${week.length === 1 ? '' : 's'} due this week, first is ${week[0].code} ${week[0].title}.`, ask: "What's due this week?" });
   if (view === 'progress') {
     out.push({ text: 'Ask me what you still need to graduate.', ask: 'What do I have left to graduate?' });
     if (p.inProgress[0]) out.push({ text: `Curious what dropping ${p.inProgress[0].code} would do?`, ask: `What happens if I drop ${p.inProgress[0].code}?` });
@@ -28,7 +31,7 @@ function hintsFor(view: View, s: DegreePathState): Hint[] {
 
 export function ChatFab({ s, view, chatOpen, online, onOpen }: { s: DegreePathState; view: View; chatOpen: boolean; online: boolean; onOpen: (q?: string) => void }) {
   // Without the optional AI, only show tips that don't need it.
-  const hints = useMemo(() => hintsFor(view, s).filter(h => online || !h.ask), [view, s.plan, s.moves.length, s.settings.summer, online]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hints = useMemo(() => hintsFor(view, s).filter(h => online || !h.ask), [view, s.plan, s.moves.length, s.settings.summer, online, s.workload]); // eslint-disable-line react-hooks/exhaustive-deps
   const [i, setI] = useState(0);
   const [show, setShow] = useState(false);
   const [muted, setMuted] = useState(() => sessionStorage.getItem('degreepath.hints') === 'off');

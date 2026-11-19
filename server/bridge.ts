@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { parseAudit } from '../src/core/audit.ts';
 import { parseCourseInfo } from '../src/core/catalog.ts';
 import type { CourseInfo } from '../src/core/types.ts';
+import { parseWorkload, type Workload } from '../src/core/d2l.ts';
 import { AGENT_ACTIONS_SCHEMA, AGENT_SYSTEM_PROMPT, looksBroken, validateAgentReply } from '../src/core/agent.ts';
 
 const run = promisify(execFile);
@@ -48,6 +49,33 @@ async function dwFresh(args: string[], timeout?: number): Promise<unknown> {
     if (!(await silentRefresh())) throw Object.assign(new Error('needs-login'), { needsLogin: true });
     return dw(args, timeout);
   }
+}
+
+// D2L (optional): titles and due dates only. Missing CLI or sign-in just means "not connected".
+function d2lPath(): string | null {
+  if (process.env.DEGREEPATH_D2L) return process.env.DEGREEPATH_D2L;
+  const local = process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, 'DegreePath', 'd2l-cli', 'Scripts', 'd2l.exe');
+  return local && existsSync(local) ? local : null;
+}
+async function d2l(args: string[]): Promise<unknown> {
+  const exe = d2lPath();
+  if (!exe) throw new Error('not-installed');
+  const { stdout } = await run(exe, ['--json', ...args], { timeout: 60_000, windowsHide: true, maxBuffer: 20 * 1024 * 1024, encoding: 'utf8' });
+  return JSON.parse(stdout);
+}
+let d2lCache: Workload | null = null;
+async function loadWorkload(force: boolean): Promise<Workload> {
+  if (!force && d2lCache && Date.now() - Date.parse(d2lCache.fetchedAt) < 20 * 60_000) return d2lCache;
+  const fetchBoth = async () => parseWorkload(await d2l(['courses']), await d2l(['due', '--days', '75']));
+  try { d2lCache = await fetchBoth(); }
+  catch (e) {
+    if ((e as Error).message === 'not-installed') return { connected: false, fetchedAt: new Date().toISOString(), courses: {} };
+    try {
+      await run(d2lPath()!, ['login', '--headless', '--channel', 'msedge'], { timeout: 90_000, windowsHide: true });
+      d2lCache = await fetchBoth();
+    } catch { return d2lCache ?? { connected: false, fetchedAt: new Date().toISOString(), courses: {} }; }
+  }
+  return d2lCache;
 }
 
 async function body(req: Connect.IncomingMessage, limit = 64_000): Promise<unknown> {
@@ -172,6 +200,9 @@ export function degreePathBridge(root: string): Plugin {
         let signedIn = false;
         try { await dw(['whoami'], 20_000); signedIn = true; } catch { /* not signed in or not installed */ }
         return send(200, { degreeworks: { signedIn }, agent: await agentStatus() });
+      }
+      if (url.split('?')[0] === '/api/d2l' && req.method === 'GET') {
+        return send(200, await loadWorkload(url.includes('refresh=1')));
       }
       if (url === '/api/audit/sync' && req.method === 'POST') {
         try { return send(200, { pathway: parseAudit(await dwFresh(['audit'], 90_000)) }); }

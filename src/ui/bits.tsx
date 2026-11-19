@@ -77,7 +77,7 @@ export function CourseTag({ code, title, tone }: { code: string; title?: string;
 export function FlyArrow({ size = 34, playKey }: { size?: number; playKey?: string }) {
   return (
     <span className="fly-arrow" key={playKey} style={{ width: size + 18, height: size + 18 }} aria-hidden="true">
-      <span className="fly-arrow-inner"><Icon name="arrow" size={size} /></span>
+      <span className="fly-clip"><span className="fly-arrow-inner"><Icon name="arrow" size={size} /></span></span>
     </span>
   );
 }

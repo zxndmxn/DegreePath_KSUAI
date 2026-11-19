@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Pathway, PlanEdits, PlanSettings } from './core/types.ts';
 import { buildPlan, codesToLookUp, defaultSettings, diffPlans, emptyEdits, type Catalog } from './core/plan.ts';
 import { api } from './api.ts';
+import type { Workload } from './core/d2l.ts';
 
 const KEYS = { pathway: 'degreepath.pathway.v2', draft: 'degreepath.draft.v2', plans: 'degreepath.plans.v2', catalog: 'degreepath.catalog.v2' };
 
@@ -22,6 +23,9 @@ export function useDegreePath() {
   const [plans, setPlans] = useState<SavedPlan[]>(() => load(KEYS.plans, []));
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [courseError, setCourseError] = useState<string | null>(null);
+  const [workload, setWorkload] = useState<Workload | null>(null);
+  const loadWorkload = useCallback((refresh = false) => api.workload(refresh).then(setWorkload).catch(() => setWorkload(null)), []);
+  useEffect(() => { if (pathway) void loadWorkload(); }, [pathway?.importedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => save(KEYS.draft, draft), [draft]);
   useEffect(() => save(KEYS.plans, plans), [plans]);
@@ -64,7 +68,7 @@ export function useDegreePath() {
     pathway ? buildPlan(pathway, catalog, edits, settings) : null, [pathway, catalog, draft.settings]);
 
   return {
-    pathway, setPathway, catalog, ensureCourses, loadingCourses, courseError,
+    pathway, setPathway, catalog, workload: workload?.connected ? workload : null, loadWorkload, ensureCourses, loadingCourses, courseError,
     edits: draft.edits, settings: draft.settings,
     setEdits: (edits: PlanEdits) => setDraft(d => ({ ...d, edits })),
     setSettings: (settings: PlanSettings) => setDraft(d => ({ ...d, settings })),

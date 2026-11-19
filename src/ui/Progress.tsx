@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { DegreePathState } from '../store.ts';
 import { compareTerms } from '../core/terms.ts';
 import { Credits, Icon, Ring, coverageColor } from './bits.tsx';
+import { dueWithin, shortDate, workloadLine } from '../core/d2l.ts';
 
 export function Progress({ s, onRoadmap, onRefresh, refreshing }: { s: DegreePathState; onRoadmap: () => void; onRefresh: () => void; refreshing: boolean }) {
   const p = s.pathway!;
@@ -38,6 +39,29 @@ export function Progress({ s, onRoadmap, onRefresh, refreshing }: { s: DegreePat
           </div>
         </div>
       </section>
+
+      {s.workload && (() => {
+        const week = dueWithin(s.workload, 7);
+        const month = dueWithin(s.workload, 30).length;
+        return (
+          <section className="week">
+            <header>
+              <div><span className="eyebrow">From D2L</span><h2>Due this week</h2></div>
+              <span className="count">{week.length ? `${week.length} this week · ${month} in 30 days` : `Nothing due this week · ${month} in 30 days`}</span>
+            </header>
+            {week.length > 0 ? (
+              <ul className="week-list">
+                {week.slice(0, 8).map(i => (
+                  <li key={i.code + i.title + i.due}>
+                    <span className="week-day">{shortDate(i.due).split(',')[0]}<b>{shortDate(i.due).split(' ').at(-1)}</b></span>
+                    <div><strong>{i.title}</strong><small><span className="code-chip">{i.code}</span> {i.type}</small></div>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="muted week-empty"><Icon name="check" size={16} /> You're clear for the next 7 days.</p>}
+          </section>
+        );
+      })()}
 
       <div className="two-col">
         <section className="panel">
@@ -77,7 +101,7 @@ export function Progress({ s, onRoadmap, onRefresh, refreshing }: { s: DegreePat
               {p.inProgress.map(c => (
                 <li key={c.code} className="course-tile in-progress">
                   <span className="code-chip">{c.code}</span>
-                  <strong>{c.title}</strong>
+                  <div className="tile-text"><strong>{c.title}</strong>{workloadLine(s.workload?.courses[c.code]) && <small>{workloadLine(s.workload?.courses[c.code])}</small>}</div>
                   <Credits n={c.credits} />
                 </li>
               ))}

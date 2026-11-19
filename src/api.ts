@@ -1,4 +1,5 @@
 import type { CourseInfo, Pathway } from './core/types.ts';
+import type { Workload } from './core/d2l.ts';
 import { partialReply, type AgentReply } from './core/agent.ts';
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
@@ -15,6 +16,7 @@ export interface BridgeStatus {
 
 export const api = {
   status: () => call<BridgeStatus>('/api/status'),
+  workload: (refresh = false) => call<Workload>(`/api/d2l${refresh ? '?refresh=1' : ''}`),
   login: () => call<{ ok: boolean }>('/api/login', { method: 'POST', body: '{}' }),
   syncAudit: () => call<{ pathway: Pathway }>('/api/audit/sync', { method: 'POST', body: '{}' }).then(r => r.pathway),
   courses: (codes: string[]) =>

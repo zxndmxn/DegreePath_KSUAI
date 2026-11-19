@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { DegreePathState } from '../store.ts';
 import type { PlanEdits } from '../core/types.ts';
 import { prereqText } from '../core/catalog.ts';
 import { compareTerms, nextTerm } from '../core/terms.ts';
 import { FlyArrow, Icon, riskLabel } from './bits.tsx';
+import { remaining } from '../core/d2l.ts';
 
 type Choice = { kind: 'drop' } | { kind: 'defer'; term: string } | { kind: 'restore' };
 
-export function CourseSheet({ s, code, onClose }: { s: DegreePathState; code: string; onClose: () => void }) {
+// Full-width drawer that opens inside the semester row: About | Try a change | Result.
+export function CourseDrawer({ s, code, onClose, workload }: { s: DegreePathState; code: string; onClose: () => void; workload?: ReactNode }) {
   const p = s.pathway!;
   const info = s.catalog[code];
   const inProgress = p.inProgress.some(c => c.code === code);
@@ -42,73 +44,53 @@ export function CourseSheet({ s, code, onClose }: { s: DegreePathState; code: st
   const after = result ? result.finish : null;
   const lands = result?.terms.find(t => t.courses.some(c => c.code === code))?.label;
   const delta = result && now && after ? Math.sign(compareTerms(after, now)) : null;
-  const tone = !result ? '' : !after ? 'bad' : delta === 1 ? 'worse' : 'ok';
+  const tone = !result ? 'idle' : !after ? 'bad' : delta === 1 ? 'worse' : 'ok';
+  const left = remaining(s.workload?.courses[code]).length;
   const status = planned ? (planned.status === 'in-progress' ? 'Taking now' : riskLabel[planned.risk]) : blocked ? 'Blocked' : 'Not planned';
 
   return (
-    <aside className="cp" aria-label={`${code} details`}>
-      <header className="cp-head">
-        <div className="cp-id">
+    <section className="drawer" aria-label={`${code} details`}>
+      <div className="drawer-col about">
+        <div className="drawer-title">
           <span className="code-chip">{code}</span>
           <span className="cp-hrs"><b>{credits}</b> credit hrs</span>
+          <span className={`cp-status risk-${planned?.status === 'in-progress' ? 'now' : planned?.risk ?? 'blocked'}`}><i />{status}</span>
         </div>
-        <button className="icon-btn" onClick={onClose} aria-label="Close course details"><Icon name="close" size={20} /></button>
-        <h2>{title}</h2>
-        <div className="cp-tags">
-          <span className={`cp-status risk-${planned?.status === 'in-progress' ? 'now' : planned?.risk ?? 'blocked'}`}><i />{status}{planned ? ` · ${planned.term}` : ''}</span>
-          {planned?.ruleLabel && <span className="cp-rule">{planned.ruleLabel}</span>}
-        </div>
-      </header>
-
-      <div className="cp-body">
-        <section className="cp-sec">
-          <h3>Offered</h3>
-          <div className="cp-offers">
-            {info?.offered.length ? info.offered.map(t => <span key={t}>{t}<small>{info.seats[t]} seats</small></span>)
-              : <em>{info ? 'Not on the published KSU schedule yet' : 'Checking the KSU schedule…'}</em>}
-          </div>
-        </section>
-        <section className="cp-sec">
-          <h3>Prerequisites</h3>
-          <p>{info ? prereqText(info.prereq) || 'None listed' : '…'}</p>
-        </section>
-        {(planned?.notes.length || blocked) ? (
-          <section className="cp-sec">
-            <h3>Heads up</h3>
-            <ul className="cp-notes">{[...(planned?.notes ?? []), ...(blocked ? [blocked.reason] : [])].map(n => <li key={n}>{n}</li>)}</ul>
-          </section>
-        ) : null}
-
-        <section className="cp-sec">
-          <h3>Try a change</h3>
-          <div className="cp-actions">
-            {inProgress && (
-              <button className={`cp-opt wide ${choice?.kind === 'drop' ? 'on' : ''}`} onClick={() => setChoice({ kind: 'drop' })}>
-                Drop it this term
-              </button>
-            )}
-            {edited && (
-              <button className={`cp-opt wide ${choice?.kind === 'restore' ? 'on' : ''}`} onClick={() => setChoice({ kind: 'restore' })}>
-                <Icon name="undo" size={14} /> Undo my change
-              </button>
-            )}
-          </div>
-          <span className="cp-label">{inProgress ? 'Or retake it in' : 'Take it in'}</span>
-          <div className="cp-terms">
-            {laterTerms.map(t => {
-              const f = offeredFlag(t);
-              return (
-                <button key={t} className={`cp-term ${choice?.kind === 'defer' && choice.term === t ? 'on' : ''} off-${f}`} onClick={() => setChoice({ kind: 'defer', term: t })}>
-                  <span>{t}</span>
-                  <small>{f === 'yes' ? 'Offered' : f === 'no' ? 'Not offered' : f === 'assumed' ? 'Likely' : 'Unknown'}</small>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <h3>{title}</h3>
+        {planned?.ruleLabel && <p className="drawer-rule">Counts toward <b>{planned.ruleLabel}</b></p>}
+        <dl className="drawer-facts">
+          <dt>Offered</dt>
+          <dd>{info?.offered.length ? info.offered.map(t => <span key={t} className="mini">{t}<small>{info.seats[t]} seats</small></span>)
+            : <em>{info ? 'Not on the published KSU schedule yet' : 'Checking the KSU schedule…'}</em>}</dd>
+          <dt>Prereqs</dt>
+          <dd>{info ? prereqText(info.prereq) || 'None listed' : '…'}</dd>
+          {(planned?.notes.length || blocked) ? <><dt>Heads up</dt><dd>{[...(planned?.notes ?? []), ...(blocked ? [blocked.reason] : [])].join(' · ')}</dd></> : null}
+        </dl>
+        {workload}
       </div>
 
-      <footer className={`cp-foot ${tone}`}>
+      <div className="drawer-col change">
+        <h4>Try a change</h4>
+        <div className="drawer-opts">
+          {inProgress && <button className={`cp-opt ${choice?.kind === 'drop' ? 'on' : ''}`} onClick={() => setChoice({ kind: 'drop' })}>Drop it this term</button>}
+          {edited && <button className={`cp-opt ${choice?.kind === 'restore' ? 'on' : ''}`} onClick={() => setChoice({ kind: 'restore' })}><Icon name="undo" size={14} /> Undo my change</button>}
+        </div>
+        <span className="cp-label">{inProgress ? 'Or retake it in' : 'Take it in'}</span>
+        <div className="cp-terms">
+          {laterTerms.map(t => {
+            const f = offeredFlag(t);
+            return (
+              <button key={t} className={`cp-term ${choice?.kind === 'defer' && choice.term === t ? 'on' : ''} off-${f}`} onClick={() => setChoice({ kind: 'defer', term: t })}>
+                <span>{t}</span>
+                <small>{f === 'yes' ? 'Offered' : f === 'no' ? 'Not offered' : f === 'assumed' ? 'Likely' : 'Unknown'}</small>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className={`drawer-col result ${tone}`}>
+        <div className="drawer-close"><button className="icon-btn" onClick={onClose} aria-label="Close course details"><Icon name="close" size={20} /></button></div>
         {result ? (
           <>
             <div className="cp-impact">
@@ -117,17 +99,19 @@ export function CourseSheet({ s, code, onClose }: { s: DegreePathState; code: st
               <div><span>After</span><strong>{after ?? 'Not reachable'}</strong></div>
             </div>
             <p>{choice?.kind === 'restore' ? 'Back to your original plan.'
-              : lands ? `${code} moves to ${lands}.${delta === 1 ? ' Graduation slips.' : delta === 0 ? ' Graduation stays put.' : ''}`
+              : lands ? `${code} moves to ${lands}.${delta === 1 ? ' Graduation slips.' : delta === 0 ? ' Graduation stays put.' : ''}${inProgress && left ? ` You'd walk away from ${left} item${left === 1 ? '' : 's'} still due this term.` : ''}`
               : `${code} can't be placed: ${result.blocked.find(b => b.code === code)?.reason ?? 'no matching offering'}.`}</p>
           </>
-        ) : <p className="cp-hint">Pick a change to preview your new graduation date.</p>}
+        ) : (
+          <div className="drawer-idle"><Icon name="sparkle" size={22} /><p>Pick a change to see your new graduation date before you commit.</p></div>
+        )}
         <div className="cp-buttons">
           <button className="btn btn-ghost" onClick={() => setChoice(null)} disabled={!choice}>Clear</button>
           <button className="btn btn-gold" disabled={!nextEdits} onClick={() => { if (nextEdits) s.setEdits(nextEdits); setChoice(null); }}>
             <Icon name="check" /> Apply
           </button>
         </div>
-      </footer>
-    </aside>
+      </div>
+    </section>
   );
 }

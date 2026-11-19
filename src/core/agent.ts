@@ -149,7 +149,7 @@ export function describeAction(a: AgentAction): string {
 }
 
 // Compact, grade-free context the model sees on every turn.
-export function buildContext(p: Pathway, plan: Plan, edits: PlanEdits, settings: PlanSettings, catalog: Catalog, baselineFinish: string | null): string {
+export function buildContext(p: Pathway, plan: Plan, edits: PlanEdits, settings: PlanSettings, catalog: Catalog, baselineFinish: string | null, upcoming: { code: string; title: string; type: string; due: string }[] = []): string {
   const lines: string[] = [];
   lines.push(`Program: ${p.program}${p.concentration ? `, concentration ${p.concentration}` : ''}. Catalog ${p.catalog}. ${p.level}.`);
   lines.push(`Current term: ${p.activeTerm}. DegreeWorks says ${p.percent}% complete. Credits applied ${p.credits.applied}, in progress ${p.credits.inProgress}.`);
@@ -172,6 +172,10 @@ export function buildContext(p: Pathway, plan: Plan, edits: PlanEdits, settings:
   for (const b of plan.blocked) lines.push(`- BLOCKED ${b.code}: ${b.reason}`);
   lines.push('VERIFIED WHAT-IFS (computed by the DegreePath planner; use these numbers, never guess):');
   lines.push(...whatIfFacts(p, catalog, edits, settings));
+  if (upcoming.length) {
+    lines.push('UPCOMING ON D2L (titles and due dates only):');
+    for (const u of upcoming.slice(0, 20)) lines.push(`- ${u.code} ${u.type}: ${u.title}, due ${u.due.slice(0, 10)}`);
+  }
   lines.push('COURSE FACTS:');
   for (const info of Object.values(catalog)) {
     if (!info) continue;

@@ -39,7 +39,7 @@ export function App() {
 
   async function refresh() {
     setRefreshing(true);
-    try { s.setPathway(await api.syncAudit()); setToast('Audit refreshed from DegreeWorks.'); }
+    try { s.setPathway(await api.syncAudit()); void s.loadWorkload(true); setToast('Refreshed from DegreeWorks and D2L.'); }
     catch (e) {
       if ((e as { needsLogin?: boolean }).needsLogin) {
         setToast('Opening a one-time KSU sign-in window…');

@@ -30,7 +30,6 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
 
   return (
     <main className={`page roadmap-page ${sheet ? 'with-panel' : ''}`}>
-      <div className="rm-main">
       <section className="finish-hero">
         <div className="finish-block">
           <span>{changed ? 'Original finish' : 'Projected finish'}</span>
@@ -124,6 +123,10 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
                       <span className="cc-hrs"><b>{c.credits}</b> cr hrs</span>
                     </span>
                     <strong className="cc-title">{c.title}</strong>
+                    <span className="cc-meta">
+                      {c.ruleLabel && <span className="cc-rule">{c.ruleLabel}</span>}
+                      {s.catalog[c.code]?.offered.length ? <span className="cc-next">Offered {s.catalog[c.code]!.offered.slice(0, 2).join(', ')}</span> : null}
+                    </span>
                     <span className="cc-status"><i />{c.status === 'in-progress' ? 'Taking now' : riskLabel[c.risk]}{c.notes[0] ? <em> · {c.notes[0]}</em> : null}</span>
                   </button>
                 </li>
@@ -136,6 +139,7 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
         ))}
         {plan.terms.length === 0 && <p className="muted">{plan.blocked.length ? 'No courses can be placed with these changes. Undo a change above or open a blocked course.' : 'Nothing left to schedule.'}</p>}
       </section>
+      {sheet && <CourseSheet key={sheet} s={s} code={sheet} onClose={() => setSheet(null)} />}
 
       <section className="roadmap-foot">
         <AddCourse s={s} />
@@ -145,8 +149,6 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
         </div>
       </section>
 
-      </div>
-      {sheet && <CourseSheet key={sheet} s={s} code={sheet} onClose={() => setSheet(null)} />}
 
       {explain && (
         <Modal title="How your roadmap is calculated" onClose={() => setExplain(false)}>

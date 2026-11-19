@@ -630,3 +630,26 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .course-card { grid-template-columns: minmax(0, 1fr); }
 .course-card .cc-row, .course-card .cc-title, .course-card .cc-status { grid-column: 1; }
 @media (max-width: 1100px) { .roadmap-page.with-panel { grid-template-columns: 1fr; } .roadmap-page > .cp { grid-column: 1; grid-row: auto; position: static; height: auto; } }
+
+/* ===== roadmap layout v5: header on top, timeline and panel as equal-height twins ===== */
+.roadmap-page.with-panel { grid-template-columns: minmax(0, 1fr) 380px; column-gap: 18px; align-items: stretch; }
+.roadmap-page.with-panel > * { grid-column: 1 / -1; }
+.roadmap-page.with-panel > .timeline { grid-column: 1; align-self: stretch; }
+.roadmap-page.with-panel > .cp { grid-column: 2; grid-row: auto; position: relative; top: 0; height: auto; min-height: 100%; align-self: stretch; overflow: visible; }
+.roadmap-page > .timeline { align-items: stretch; }
+.timeline > .term { display: flex; flex-direction: column; gap: 12px; }
+.timeline > .term .term-courses { flex: 1; align-content: stretch; }
+.timeline > .term .grad-ribbon { margin-top: auto; }
+.cp { border-radius: 20px; }
+.cp-head { border-radius: 20px 20px 0 0; }
+.cp-foot { position: sticky; bottom: 0; border-radius: 0 0 20px 20px; }
+.cp-body { overflow: visible; }
+.roadmap-page.with-panel .timeline:has(> .term:only-of-type) .term-courses { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .roadmap-page.with-panel > .timeline, .roadmap-page.with-panel > .cp { grid-column: 1 / -1; } }
+.timeline > .term .term-courses > li { display: flex; }
+.timeline > .term .term-courses > li > .course-card { flex: 1; }
+
+.course-card { grid-template-rows: auto auto 1fr auto; }
+.course-card .cc-meta { display: grid; gap: 4px; align-content: start; font-size: 12px; color: var(--muted); font-weight: 600; min-width: 0; }
+.course-card .cc-meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.course-card .cc-next::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--muted); vertical-align: 1px; }

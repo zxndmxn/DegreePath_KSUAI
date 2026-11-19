@@ -1,83 +1,76 @@
-# DegreePath_KSUAI
+# DegreePath
 
-A student-first degree-path simulator for the KSU AI hackathon. Change a course decision, compare its impact on your semester plan, and save alternatives.
+See every path to your KSU graduation. DegreePath reads your DegreeWorks audit, maps what is left against the live KSU class schedule, and lets you try drops, delays and adds before you commit. A local AI agent answers questions about your path and proposes changes that the planner checks first.
 
-**Current state:** DegreePath reviews manual student entries and DegreeWorks CLI audit files in the browser. The roadmap, multi-course scenarios and optional It/Codex companion use a fictional curriculum. Live KSU sign-in and audit export need an end-to-end check. Imported requirements and actual offerings are still separate from route calculation.
+Part of the KSU AI Hackathon, alongside [Nudox Lab Ops](https://github.com/zxndmxn/nudox-lab-map).
 
-**New:** My plan → **Compare options** compares 12/15/18-credit routes using the same scheduler. **Continue in It** passes the current sample edits to the locally installed workspace; **Ask agent to compare** queues a request and displays the agent's returned explanation. See [setup and limitations](docs/it-integration.md) and [solo walkthrough](docs/demo-run.md).
+## Status
 
-## Run locally
+| Area | State |
+| --- | --- |
+| One-click DegreeWorks sync (or upload `dw --json audit`) | Working with a live KSU account |
+| Progress: requirements, this term, course history | Working, no grades stored |
+| Roadmap built from your real remaining courses and live offerings | Working |
+| What-if: drop, take later, add a course, credit cap, summer | Working, previewed before you apply |
+| Compare and saved plans | Working |
+| Local agent chat (Ollama, Qwen 2.5 3B) | Working, runs on this computer |
 
-Requires Node.js 22.18 or newer. No API key or app account required.
+## Quick start
+
+Needs Node.js 22.18+, the organizer's [DegreeWorks CLI](https://github.com/Aaryan-Kapoor/degreeworks-cli) signed in once with `dw login`, and [Ollama](https://ollama.com).
 
 ```sh
 git clone https://github.com/zxndmxn/DegreePath_KSUAI.git
 cd DegreePath_KSUAI
-npm ci
+npm install --include=dev
+npm run agent:setup   # pulls qwen2.5:3b and builds the "degreepath" model
 npm run dev
 ```
 
-Open http://127.0.0.1:4173/. Stop with Ctrl+C. The server binds to localhost only.
+Open http://127.0.0.1:4173/ and click **Sync from DegreeWorks**.
 
-This repository is private. The owner invites teammates through Settings → Collaborators; teammates must accept before cloning. No collaborators are automatically added by this setup.
+On Windows, if PowerShell blocks `npm`, use `cmd /c npm ...`. If your machine sets `NODE_ENV=production`, keep `--include=dev`.
 
-## Try it
+## How it works
 
-On the home screen, import a DegreeWorks audit or enter your degree progress manually. DegreePath keeps the reviewed fields in your browser. The student view shows applied credits, requirements and courses. Select **Open sample roadmap** to try the planning demo below.
-
-For a real import, use the organizer’s [DegreeWorks CLI](https://github.com/Aaryan-Kapoor/degreeworks-cli). In PowerShell, sign in with `dw login`, then export with `dw --json audit | Set-Content -Encoding utf8 degreeworks-audit.json`. Choose the file in DegreePath. The raw audit and KSU credentials stay outside the app's saved review.
-
-1. Open My plan. The 15-credit baseline finishes Fall 2029.
-2. Click anywhere on Calculus II. Keyboard users can focus a card and press Enter.
-3. Choose Take it later; the default two-semester deferral moves the estimate to Spring 2030.
-4. Choose Create roadmap, then compare Baseline and What-if plan. Use next/previous semester and course controls to reach longer lists without clipping.
-5. Semester chips list courses immediately. Edit another class to accumulate changes; Undo removes only that class's edit.
-6. Save plan locally, then restore the complete scenario from Saved plans after reloading. Older single-course saves still load.
-7. Result and Connections are separate editor views. Blocked requirements open from View requirements. Compare paths computes baseline-versus-scenario results; degree previews remain unevaluated.
-
-See [the solo walkthrough](docs/demo-run.md) for exact clicks, expected results and feedback capture. The finish-transition arrow animates on hover/keyboard focus and respects reduced-motion preferences.
-
-The top-right switch controls light/dark mode. Saved plans and theme preference stay in the current browser; they do not sync between teammates. Unsaved changes reset on reload.
-
-## Check and build
-
-```sh
-npm test
-npm run build
-npm run preview
+```
+DegreeWorks CLI (dw) ──> local bridge (server/bridge.ts, inside Vite on 127.0.0.1)
+   audit, course prereqs,      │  parses the audit, drops grades/GPA/name/ID
+   sections and seats          ▼
+                         pathway + catalog ──> planner (src/core/plan.ts) ──> roadmap UI
+                                                    ▲
+                         local agent (Ollama) ──────┘  proposes actions, planner verifies
 ```
 
-The 22 tests check TypeScript/build, 270 single-course scenario combinations, accumulated constraints and per-course undo, local scenario serialization, planned coverage, partial-schedule regression, and normalized-import/data fixtures. Build output goes to ignored dist/. Dev and preview use the same port; stop one before starting the other.
+- **Planner:** schedules remaining courses term by term using KSU prerequisites (including same-term co-requisites), published offerings and seats, your credit cap and summer choice. Past the published schedule it assumes the same season repeats and marks the course **Watch**.
+- **Colors:** green on track, gold watch, orange moved, red blocked, blue taking now.
+- **Agent:** sees a grade-free summary of your plan and live course facts. It may only propose `drop`, `defer`, `add`, `restore`, credit cap or summer changes. Each proposal shows its verified finish date before you apply it.
 
-| File | Responsibility |
+## Privacy
+
+- Everything runs on this computer. The raw audit never reaches the browser; the bridge keeps only courses, terms, credits and requirements.
+- Grades, GPA, name, student ID and email are never stored or sent to the model.
+- Course lookups are cached in `.cache/` (git-ignored). Saved plans live in your browser.
+
+## Tests
+
+```sh
+npm test   # type-check + 17 tests: audit privacy, prerequisite parsing, scheduling, blocked reasons, agent guardrails
+```
+
+## Known limits
+
+- Requirement rules come from DegreeWorks as-is. Choose-from lists show as options to pick, but complex sharing rules are not modeled.
+- Future offerings beyond KSU's published terms are assumptions.
+- Ollama's Vulkan backend returns corrupted text on some AMD laptop GPUs, so the agent runs on CPU by default (about 10 to 15 seconds per answer after warm-up). Set `DEGREEPATH_GPU=1` to try the GPU.
+- Planning only: confirm withdrawals, registration and financial aid with your advisor.
+
+## Project layout
+
+| Path | What it does |
 | --- | --- |
-| src/main.ts | Interface, course dialog, theme, saved plans |
-| src/planner.ts | Fictional graph and deterministic scheduler |
-| src/style.css | Responsive light/dark design |
-| tests/planner.test.mjs | Capacity, prerequisites, deferral, exclusion, scenario coverage |
-| [docs/real-app-plan.md](docs/real-app-plan.md) | Development stages |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Team workflow |
-
-## Prototype boundaries
-
-The fictional Computing B.S. starts Spring 2027 with 60 summarized earned credits and 18 remaining courses totaling 60 credits. Only Calculus I and Programming I are individually modeled as completed prerequisites. Codes and requirements are invented.
-
-The greedy scheduler assumes every course runs each fall/spring, prerequisites finish in earlier terms, and all modeled courses are mandatory. Deferral means no earlier than baseline placement plus 1–4 terms. Baseline and scenario share the 12/15/18-credit cap. Results are not guaranteed to be the earliest possible finish.
-
-Multiple course constraints are supported. Excluding Programming II alone leaves two schedulable semesters and 12 blocked requirements. Excluding both Calculus II and Programming II leaves only Spring 2027, four available courses (13 credits), and 14 blocked requirements. This is a **partial schedule**, never a one-semester degree.
-
-Coverage counts earned plus planned credits through the original finish date; earned credits remain 60. The displayed percentage controls the red/orange/yellow coverage-bar color. The roadmap action separately reflects disruption. At laptop sizes, paging keeps course/semester/edit lists accessible without clipped rows; no unsupported degree data is silently filled in.
-
-OR prerequisites, corequisites, grades, elective allocation, residency, transfer evaluation, admission gates, real offerings, section conflicts, and advisor exceptions are not modeled. No student data is transmitted. Fonts use the local system.
-
-Confirm event rules, AI requirements, and pre-existing-code policy before a competition submission.
-
-## Data pipeline work
-
-The website still runs the original fictional 18-course planner. New contracts, mock records, and normalized-JSON intake are development foundations and are not connected to the UI.
-
-- [Data pipeline research and architecture](docs/data-pipeline.md)
-- [Task status and next actions](docs/task-status.md)
-- [Data packs and their limitations](data/README.md)
-
-The target is all current KSU programs. A 291-entry public directory inventory is included for discovery; no real program is yet advertised as reviewed/schedulable. The synthetic integration pack includes 48 invented courses, three programs, six students, and 576 offering records.
+| `server/bridge.ts` | Local API: status, audit sync, course lookups, agent |
+| `src/core/` | Audit parser, prerequisite parser, planner, agent rules |
+| `src/ui/` | Welcome, Progress, Roadmap, course panel, Compare, Plans, Chat |
+| `agent/Modelfile` | The curated `degreepath` model |
+| `tests/` | Node tests on synthetic data only |

@@ -1,7 +1,0 @@
-SYNTHETIC AUDIT TEXT — not a genuine DegreeWorks export or supported parser format
-Program: demo-computing | Catalog: DEMO-2026-27 | Audit: 2026-11-16
-DEMO1001 | Programming Foundations | 2023-SP | F | 3 attempted | 0 earned
-DEMO 1001 | Programming Foundations | 2024-FA | B | 3 attempted | 3 earned
-DEMO 1013 | Programming Practice | 2026-FA | IP | 3 attempted | 0 earned
-EXT 9999 | Unresolved Transfer | 2025-FA | TC | 3 attempted | 3 earned
-STILL NEEDED: demonstration-only requirement text

@@ -1,12 +1,11 @@
 node_modules/
 dist/
-.preview/
+.cache/
 *.log
-
 .env
 .env.*
 !.env.example
+*.tsbuildinfo
+degreeworks-audit*.json
 .DS_Store
 Thumbs.db
-.it-page/
-.it-work/

@@ -1,18 +1,25 @@
 {
-  "name": "degreepath-prototype",
-  "version": "0.1.0",
+  "name": "degreepath",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 4173 --strictPort",
-    "build": "tsc && vite build",
-    "test": "npm run build && node --test tests/*.test.mjs",
+    "build": "tsc -p . && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
-    "build:it": "tsc && vite build --base ./ && node scripts/prepare-it.mjs",
-    "routes": "node scripts/compare-routes.mjs"
+    "test": "tsc -p . && node --test tests/*.test.mjs",
+    "agent:setup": "node scripts/setup-agent.mjs"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "typescript": "latest",
-    "vite": "latest"
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.8.0",
+    "vite": "^7.0.0"
   }
 }

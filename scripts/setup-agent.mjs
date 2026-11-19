@@ -8,7 +8,7 @@ const ollama = candidates.find(c => c && (c === 'ollama' || existsSync(c)));
 const run = args => execFileSync(ollama, args, { stdio: 'inherit' });
 
 try {
-  run(['pull', 'qwen2.5:3b']);
+  run(['pull', 'qwen2.5:1.5b']);
   run(['create', 'degreepath', '-f', join('agent', 'Modelfile')]);
   console.log('\nDegreePath agent ready. Start the app with npm run dev.');
 } catch {

@@ -104,7 +104,7 @@ export function App() {
         </div>
       )}
 
-      {s.pathway && <ChatFab s={s} view={view} chatOpen={chatOpen} onOpen={q => (q ? ask(q) : setChatOpen(true))} />}
+      {s.pathway && <ChatFab s={s} view={view} chatOpen={chatOpen} online={!!status?.agent.running && !!status.agent.model} onOpen={q => (q ? ask(q) : setChatOpen(true))} />}
       {s.pathway && <Chat s={s} status={status} open={chatOpen} onClose={() => setChatOpen(false)} seed={seed} onSeedUsed={() => setSeed(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>

@@ -16,7 +16,7 @@ const run = promisify(execFile);
 const CODE = /^[A-Z]{2,5} \d{4}[A-Z]?$/;
 const OLLAMA = process.env.DEGREEPATH_OLLAMA ?? 'http://127.0.0.1:11434';
 const MODEL = process.env.DEGREEPATH_MODEL ?? 'degreepath';
-const FALLBACK_MODEL = 'qwen2.5:3b';
+const FALLBACK_MODEL = 'qwen2.5:1.5b';
 const TTL_MS = 12 * 60 * 60 * 1000;
 // Ollama's Vulkan backend returns corrupted tokens on some AMD laptop GPUs, so DegreePath runs the
 // 3B model on CPU by default and pre-warms the prompt cache. DEGREEPATH_GPU=1 lets Ollama use the GPU.

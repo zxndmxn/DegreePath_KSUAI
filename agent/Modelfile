@@ -1,5 +1,5 @@
 # DegreePath local planning agent. Build with: npm run agent:setup
-FROM qwen2.5:3b
+FROM qwen2.5:1.5b
 PARAMETER temperature 0.2
 PARAMETER num_ctx 8192
 PARAMETER top_p 0.9

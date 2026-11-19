@@ -13,24 +13,19 @@ Part of the KSU AI Hackathon, alongside [Nudox Lab Ops](https://github.com/zxndm
 | Roadmap built from your real remaining courses and live offerings | Working |
 | What-if: drop, take later, add a course, credit cap, summer | Working, previewed before you apply |
 | Compare and saved plans | Working |
-| Local agent chat (Ollama, Qwen 2.5 3B) | Working, runs on this computer, grounded in planner results |
+| Optional local assistant (Ollama, Qwen 2.5 1.5B) | Working, grounded in planner results; app works without it |
+| One-click launcher and desktop shortcut | Working |
 | Floating assistant with page hints | Working |
 
 ## Quick start
 
-Needs Node.js 22.18+, the organizer's [DegreeWorks CLI](https://github.com/Aaryan-Kapoor/degreeworks-cli) signed in once with `dw login`, and [Ollama](https://ollama.com).
+**One click:** double-click `Start DegreePath.cmd` (or the DegreePath desktop shortcut). It installs what it needs on first run, starts the app and opens it in your browser. Close its window to stop DegreePath.
 
-```sh
-git clone https://github.com/zxndmxn/DegreePath_KSUAI.git
-cd DegreePath_KSUAI
-npm install --include=dev
-npm run agent:setup   # pulls qwen2.5:3b and builds the "degreepath" model
-npm run dev
-```
+Needs Node.js 22.18+ and the organizer's [DegreeWorks CLI](https://github.com/Aaryan-Kapoor/degreeworks-cli) signed in once with `dw login --channel msedge`.
 
-Open http://127.0.0.1:4173/ and click **Sync from DegreeWorks**.
+**The assistant is optional.** DegreePath works fully without it. To turn it on, install [Ollama](https://ollama.com) and run `npm run agent:setup` once. It uses Qwen 2.5 1.5B (about 1 GB), small enough for nearly any laptop.
 
-On Windows, if PowerShell blocks `npm`, use `cmd /c npm ...`. If your machine sets `NODE_ENV=production`, keep `--include=dev`.
+Developers can also run `npm install --include=dev` then `npm run dev`. On Windows, if PowerShell blocks `npm`, use `cmd /c npm ...`.
 
 ## How it works
 
@@ -63,7 +58,7 @@ npm test   # type-check + 20 tests: audit privacy, prerequisite parsing, schedul
 
 - Requirement rules come from DegreeWorks as-is. Choose-from lists show as options to pick, but complex sharing rules are not modeled.
 - Future offerings beyond KSU's published terms are assumptions.
-- Ollama's Vulkan backend returns corrupted text on some AMD laptop GPUs, so the agent runs on CPU by default (first words in about a second, full answer in about 6 to 12 seconds). Set `DEGREEPATH_GPU=1` to try the GPU.
+- Ollama's Vulkan backend returns corrupted text on some AMD laptop GPUs, so the assistant runs on CPU by default (about 4 seconds per answer). Set `DEGREEPATH_GPU=1` to try the GPU.
 - Planning only: confirm withdrawals, registration and financial aid with your advisor.
 
 ## Project layout
@@ -73,5 +68,6 @@ npm test   # type-check + 20 tests: audit privacy, prerequisite parsing, schedul
 | `server/bridge.ts` | Local API: status, audit sync, course lookups, agent |
 | `src/core/` | Audit parser, prerequisite parser, planner, agent rules |
 | `src/ui/` | Welcome, Progress, Roadmap, course panel, add-course search, Compare, Plans, Chat, floating assistant |
-| `agent/Modelfile` | The curated `degreepath` model |
+| `agent/Modelfile` | The curated `degreepath` model (Qwen 2.5 1.5B) |
+| `Start DegreePath.cmd`, `scripts/start.mjs` | One-click launcher |
 | `tests/` | Node tests on synthetic data only |

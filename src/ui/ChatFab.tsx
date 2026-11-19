@@ -26,8 +26,9 @@ function hintsFor(view: View, s: DegreePathState): Hint[] {
   return out;
 }
 
-export function ChatFab({ s, view, chatOpen, onOpen }: { s: DegreePathState; view: View; chatOpen: boolean; onOpen: (q?: string) => void }) {
-  const hints = useMemo(() => hintsFor(view, s), [view, s.plan, s.moves.length, s.settings.summer]); // eslint-disable-line react-hooks/exhaustive-deps
+export function ChatFab({ s, view, chatOpen, online, onOpen }: { s: DegreePathState; view: View; chatOpen: boolean; online: boolean; onOpen: (q?: string) => void }) {
+  // Without the optional AI, only show tips that don't need it.
+  const hints = useMemo(() => hintsFor(view, s).filter(h => online || !h.ask), [view, s.plan, s.moves.length, s.settings.summer, online]); // eslint-disable-line react-hooks/exhaustive-deps
   const [i, setI] = useState(0);
   const [show, setShow] = useState(false);
   const [muted, setMuted] = useState(() => sessionStorage.getItem('degreepath.hints') === 'off');
@@ -51,7 +52,7 @@ export function ChatFab({ s, view, chatOpen, onOpen }: { s: DegreePathState; vie
     <div className="fab-wrap">
       {show && hint && (
         <div className="fab-hint" role="status">
-          <button className="fab-hint-body" onClick={() => { setShow(false); onOpen(hint.ask); }}>
+          <button className="fab-hint-body" onClick={() => { setShow(false); if (hint.ask) onOpen(hint.ask); }}>
             <Icon name="sparkle" size={15} /> <span>{hint.text}</span>
           </button>
           <button className="fab-hint-x" aria-label="Stop hints" title="Stop hints"

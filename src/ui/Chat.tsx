@@ -83,7 +83,7 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
         {msgs.length === 0 && (
           <div className="chat-empty">
             <p>I know your audit, your roadmap and the live KSU schedule. Ask anything about your path. Every change I suggest is checked by the planner before you apply it.</p>
-            {!online && <p className="chat-offline">Start Ollama and run <code>npm run agent:setup</code> to turn me on. Everything stays on this computer.</p>}
+            {!online && <p className="chat-offline">The assistant is optional and is off right now. Everything else in DegreePath works without it. To turn it on, install Ollama and run <code>npm run agent:setup</code> once.</p>}
             <div className="starter-grid">
               {STARTERS.map(q => <button key={q} className="starter" disabled={!online} onClick={() => void send(q)}>{q}</button>)}
             </div>

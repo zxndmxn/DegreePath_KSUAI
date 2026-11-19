@@ -11,13 +11,14 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface BridgeStatus {
   degreeworks: { signedIn: boolean };
+  d2l: { connected: boolean };
   agent: { running: boolean; model: string | null };
 }
 
 export const api = {
   status: () => call<BridgeStatus>('/api/status'),
   workload: (refresh = false) => call<Workload>(`/api/d2l${refresh ? '?refresh=1' : ''}`),
-  login: () => call<{ ok: boolean }>('/api/login', { method: 'POST', body: '{}' }),
+  connect: () => call<{ ok: boolean; degreeworks: boolean; d2l: boolean }>('/api/connect', { method: 'POST', body: '{}' }),
   syncAudit: () => call<{ pathway: Pathway }>('/api/audit/sync', { method: 'POST', body: '{}' }).then(r => r.pathway),
   courses: (codes: string[]) =>
     call<{ courses: Record<string, CourseInfo | null> }>('/api/courses', { method: 'POST', body: JSON.stringify({ codes }) }).then(r => r.courses),

@@ -8,7 +8,8 @@ Part of the KSU AI Hackathon, alongside [Nudox Lab Ops](https://github.com/zxndm
 
 | Area | State |
 | --- | --- |
-| One-click DegreeWorks sync (or upload `dw --json audit`) | Working with a live KSU account |
+| Built-in KSU sign-in, one-click DegreeWorks sync | Working with a live KSU account, nothing else to install |
+| D2L due dates next to each course (titles and dates only) | Working, same sign-in |
 | Progress: requirements, this term, course history | Working, no grades stored |
 | Roadmap built from your real remaining courses and live offerings | Working |
 | What-if: drop, take later, add a course, credit cap, summer | Working, previewed before you apply |
@@ -21,7 +22,7 @@ Part of the KSU AI Hackathon, alongside [Nudox Lab Ops](https://github.com/zxndm
 
 **One click:** double-click `Start DegreePath.cmd` (or the DegreePath desktop shortcut). It installs what it needs on first run, starts the app and opens it in your browser. Close its window to stop DegreePath.
 
-Needs Node.js 22.18+ and the organizer's [DegreeWorks CLI](https://github.com/Aaryan-Kapoor/degreeworks-cli) signed in once with `dw login --channel msedge`.
+Needs Node.js 22.18+ and Microsoft Edge or Google Chrome (every Windows PC has Edge). On first launch click **Connect your KSU account**: the normal KSU Microsoft sign-in opens once, the same one as Owl Express. That one sign-in covers DegreeWorks and D2L and renews itself in the background. No Python or extra tools.
 
 **The assistant is optional.** DegreePath works fully without it. To turn it on, install [Ollama](https://ollama.com) and run `npm run agent:setup` once. It uses Qwen 2.5 1.5B (about 1 GB), small enough for nearly any laptop.
 
@@ -30,9 +31,9 @@ Developers can also run `npm install --include=dev` then `npm run dev`. On Windo
 ## How it works
 
 ```
-DegreeWorks CLI (dw) ──> local bridge (server/bridge.ts, inside Vite on 127.0.0.1)
-   audit, course prereqs,      │  parses the audit, drops grades/GPA/name/ID
-   sections and seats          ▼
+KSU DegreeWorks + D2L ──> built-in connector (server/ksu.ts) ──> local bridge (server/bridge.ts, 127.0.0.1)
+   audit, prereqs, seats,        one KSU sign-in, read-only     │  parses the audit, drops grades/GPA/name/ID
+   due dates                                                     ▼
                          pathway + catalog ──> planner (src/core/plan.ts) ──> roadmap UI
                                                     ▲
                          local agent (Ollama) ──────┘  proposes actions, planner verifies
@@ -46,12 +47,13 @@ DegreeWorks CLI (dw) ──> local bridge (server/bridge.ts, inside Vite on 127.
 
 - Everything runs on this computer. The raw audit never reaches the browser; the bridge keeps only courses, terms, credits and requirements.
 - Grades, GPA, name, student ID and email are never stored or sent to the model.
+- Your KSU session is saved only on this computer under `%LOCALAPPDATA%\DegreePath` (never in the repo). The connector only reads; it never requests D2L grades.
 - Course lookups are cached in `.cache/` (git-ignored). Saved plans live in your browser.
 
 ## Tests
 
 ```sh
-npm test   # type-check + 20 tests: audit privacy, prerequisite parsing, scheduling, blocked reasons, agent grounding and guardrails
+npm test   # type-check + 24 tests: audit privacy, prerequisite parsing, scheduling, blocked reasons, agent grounding and guardrails
 ```
 
 ## Known limits

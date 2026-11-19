@@ -1,82 +1,44 @@
 // Local bridge for DegreePath. Runs inside the Vite dev/preview server on 127.0.0.1.
-// It runs the DegreeWorks CLI with fixed arguments and talks to a local Ollama model.
+// It connects to KSU's DegreeWorks and D2L through the built-in connector (server/ksu.ts)
+// and talks to an optional local Ollama model.
 // Raw audits never reach the browser: they are parsed here and only the pathway is returned.
 import type { Plugin, Connect } from 'vite';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseAudit } from '../src/core/audit.ts';
 import { parseCourseInfo } from '../src/core/catalog.ts';
 import type { CourseInfo } from '../src/core/types.ts';
 import { parseWorkload, type Workload } from '../src/core/d2l.ts';
+import { KsuError, fetchAudit, fetchCourse, fetchD2L, ksuStatus, signIn } from './ksu.ts';
 import { AGENT_ACTIONS_SCHEMA, AGENT_SYSTEM_PROMPT, looksBroken, validateAgentReply } from '../src/core/agent.ts';
 
-const run = promisify(execFile);
 const CODE = /^[A-Z]{2,5} \d{4}[A-Z]?$/;
 const OLLAMA = process.env.DEGREEPATH_OLLAMA ?? 'http://127.0.0.1:11434';
 const MODEL = process.env.DEGREEPATH_MODEL ?? 'degreepath';
 const FALLBACK_MODEL = 'qwen2.5:1.5b';
 const TTL_MS = 12 * 60 * 60 * 1000;
 // Ollama's Vulkan backend returns corrupted tokens on some AMD laptop GPUs, so DegreePath runs the
-// 3B model on CPU by default and pre-warms the prompt cache. DEGREEPATH_GPU=1 lets Ollama use the GPU.
+// assistant on CPU by default. DEGREEPATH_GPU=1 lets Ollama use the GPU.
 const GPU_LAYERS = process.env.DEGREEPATH_GPU === '1' ? undefined : 0;
 
-function dwPath(): string {
-  if (process.env.DEGREEPATH_DW) return process.env.DEGREEPATH_DW;
-  const local = process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, 'DegreePath', 'degreeworks-cli', 'Scripts', 'dw.exe');
-  return local && existsSync(local) ? local : 'dw';
-}
-
-async function dw(args: string[], timeout = 60_000): Promise<unknown> {
-  const { stdout } = await run(dwPath(), ['--json', ...args], { timeout, windowsHide: true, maxBuffer: 20 * 1024 * 1024, encoding: 'utf8' });
-  return JSON.parse(stdout);
-}
-
-// The CLI's token lasts about 90 minutes. Its saved Edge profile can renew it without a window.
-let refreshing: Promise<boolean> | null = null;
-function silentRefresh(): Promise<boolean> {
-  refreshing ??= run(dwPath(), ['login', '--headless', '--channel', 'msedge'], { timeout: 90_000, windowsHide: true })
-    .then(() => true, () => false)
-    .finally(() => { setTimeout(() => { refreshing = null; }, 1000); });
-  return refreshing;
-}
-
-async function dwFresh(args: string[], timeout?: number): Promise<unknown> {
-  try { return await dw(args, timeout); }
-  catch {
-    if (!(await silentRefresh())) throw Object.assign(new Error('needs-login'), { needsLogin: true });
-    return dw(args, timeout);
-  }
-}
-
-// D2L (optional): titles and due dates only. Missing CLI or sign-in just means "not connected".
-function d2lPath(): string | null {
-  if (process.env.DEGREEPATH_D2L) return process.env.DEGREEPATH_D2L;
-  const local = process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, 'DegreePath', 'd2l-cli', 'Scripts', 'd2l.exe');
-  return local && existsSync(local) ? local : null;
-}
-async function d2l(args: string[]): Promise<unknown> {
-  const exe = d2lPath();
-  if (!exe) throw new Error('not-installed');
-  const { stdout } = await run(exe, ['--json', ...args], { timeout: 60_000, windowsHide: true, maxBuffer: 20 * 1024 * 1024, encoding: 'utf8' });
-  return JSON.parse(stdout);
-}
+// D2L (optional): titles and due dates only. Not connected just means those pieces stay hidden.
 let d2lCache: Workload | null = null;
 async function loadWorkload(force: boolean): Promise<Workload> {
   if (!force && d2lCache && Date.now() - Date.parse(d2lCache.fetchedAt) < 20 * 60_000) return d2lCache;
-  const fetchBoth = async () => parseWorkload(await d2l(['courses']), await d2l(['due', '--days', '75']));
-  try { d2lCache = await fetchBoth(); }
-  catch (e) {
-    if ((e as Error).message === 'not-installed') return { connected: false, fetchedAt: new Date().toISOString(), courses: {} };
-    try {
-      await run(d2lPath()!, ['login', '--headless', '--channel', 'msedge'], { timeout: 90_000, windowsHide: true });
-      d2lCache = await fetchBoth();
-    } catch { return d2lCache ?? { connected: false, fetchedAt: new Date().toISOString(), courses: {} }; }
+  if (!ksuStatus().d2l) return { connected: false, fetchedAt: new Date().toISOString(), courses: {} };
+  try {
+    const { courses, due } = await fetchD2L(75);
+    d2lCache = parseWorkload(courses, due);
+  } catch {
+    return d2lCache ?? { connected: false, fetchedAt: new Date().toISOString(), courses: {} };
   }
   return d2lCache;
 }
+
+const errorReply = (e: unknown) => {
+  const k = e instanceof KsuError ? e : new KsuError('Something went wrong talking to KSU. Try again.', 'network');
+  return { status: k.code === 'needs-login' ? 401 : k.code === 'no-browser' ? 424 : 502, data: { error: k.message, code: k.code, needsLogin: k.code === 'needs-login' } };
+};
 
 async function body(req: Connect.IncomingMessage, limit = 64_000): Promise<unknown> {
   let text = '';
@@ -121,7 +83,7 @@ export function degreePathBridge(root: string): Plugin {
       while (todo.length) {
         const code = todo.shift()!;
         const [subj, num] = code.split(' ');
-        try { out[code] = c[code] = parseCourseInfo(await dwFresh(['course', subj, num], 45_000), code); }
+        try { out[code] = c[code] = parseCourseInfo(await fetchCourse(subj, num), code); }
         catch { out[code] = c[code] ?? null; }
         changed = true;
       }
@@ -197,25 +159,20 @@ export function degreePathBridge(root: string): Plugin {
 
     try {
       if (url === '/api/status' && req.method === 'GET') {
-        let signedIn = false;
-        try { await dw(['whoami'], 20_000); signedIn = true; } catch { /* not signed in or not installed */ }
-        return send(200, { degreeworks: { signedIn }, agent: await agentStatus() });
+        const k = ksuStatus();
+        return send(200, { degreeworks: { signedIn: k.degreeworks }, d2l: { connected: k.d2l }, agent: await agentStatus() });
       }
       if (url.split('?')[0] === '/api/d2l' && req.method === 'GET') {
         return send(200, await loadWorkload(url.includes('refresh=1')));
       }
       if (url === '/api/audit/sync' && req.method === 'POST') {
-        try { return send(200, { pathway: parseAudit(await dwFresh(['audit'], 90_000)) }); }
-        catch (e) {
-          return (e as { needsLogin?: boolean }).needsLogin
-            ? send(401, { error: 'Your DegreeWorks sign-in expired. Click Sign in to DegreeWorks to renew it.', needsLogin: true })
-            : send(502, { error: 'Could not reach DegreeWorks right now. Try again in a minute.' });
-        }
+        try { return send(200, { pathway: parseAudit(await fetchAudit()) }); }
+        catch (e) { const r = errorReply(e); return send(r.status, r.data); }
       }
-      if (url === '/api/login' && req.method === 'POST') {
-        // Opens a one-time KSU SSO window; the CLI captures the session and closes it.
-        try { await run(dwPath(), ['login', '--channel', 'msedge'], { timeout: 300_000, windowsHide: false }); return send(200, { ok: true }); }
-        catch { return send(502, { error: 'Sign-in did not finish. Try again.' }); }
+      if (url === '/api/connect' && req.method === 'POST') {
+        // Opens the one-time KSU sign-in window (same Microsoft login as Owl Express). Covers DegreeWorks and D2L.
+        try { await signIn(false); d2lCache = null; return send(200, { ok: true, ...ksuStatus() }); }
+        catch (e) { const r = errorReply(e); return send(r.status, r.data); }
       }
       if (url === '/api/courses' && req.method === 'POST') {
         const { codes } = (await body(req)) as { codes?: unknown };

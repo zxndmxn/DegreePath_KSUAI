@@ -43,7 +43,7 @@ export function App() {
     catch (e) {
       if ((e as { needsLogin?: boolean }).needsLogin) {
         setToast('Opening a one-time KSU sign-in window…');
-        try { await api.login(); s.setPathway(await api.syncAudit()); setToast('Signed in and refreshed.'); }
+        try { await api.connect(); s.setPathway(await api.syncAudit()); void s.loadWorkload(true); setToast('Signed in and refreshed.'); }
         catch (e2) { setToast(e2 instanceof Error ? e2.message : 'Sign-in failed.'); }
       } else setToast(e instanceof Error ? e.message : 'Refresh failed.');
     }

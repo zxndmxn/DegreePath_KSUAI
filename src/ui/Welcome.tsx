@@ -5,21 +5,22 @@ import type { Pathway } from '../core/types.ts';
 import { Icon } from './bits.tsx';
 
 export function Welcome({ status, onLoaded }: { status: BridgeStatus | null; onLoaded: (p: Pathway) => void }) {
-  const [busy, setBusy] = useState<'sync' | 'file' | null>(null);
+  const [busy, setBusy] = useState<'sync' | 'login' | 'file' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
   const [needsLogin, setNeedsLogin] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function sync() {
+    if (status && !status.degreeworks.signedIn) return signIn();
     setBusy('sync'); setError(null);
     try { onLoaded(await api.syncAudit()); }
     catch (e) { setError(e instanceof Error ? e.message : 'Sync failed.'); setNeedsLogin(!!(e as { needsLogin?: boolean }).needsLogin); }
     finally { setBusy(null); }
   }
   async function signIn() {
-    setBusy('sync'); setError(null);
-    try { await api.login(); setNeedsLogin(false); onLoaded(await api.syncAudit()); }
+    setBusy('login'); setError(null);
+    try { await api.connect(); setNeedsLogin(false); onLoaded(await api.syncAudit()); }
     catch (e) { setError(e instanceof Error ? e.message : 'Sign-in failed.'); }
     finally { setBusy(null); }
   }
@@ -44,10 +45,14 @@ export function Welcome({ status, onLoaded }: { status: BridgeStatus | null; onL
 
       <div className="welcome-cards">
         <button className="welcome-card primary" onClick={sync} disabled={busy !== null}>
-          <span className="welcome-icon"><Icon name="refresh" size={26} /></span>
-          <strong>{busy === 'sync' ? 'Syncing your audit…' : 'Sync from DegreeWorks'}</strong>
-          <span>{signedIn === false ? 'Sign in once on this computer, then sync.' : 'One click. Renews your DegreeWorks session automatically.'}</span>
-          <span className={`status-dot ${signedIn ? 'on' : signedIn === false ? 'off' : ''}`}>{signedIn ? 'Session ready' : signedIn === false ? 'Not signed in' : 'Checking…'}</span>
+          <span className="welcome-icon"><Icon name={signedIn === false ? 'lock' : 'refresh'} size={26} /></span>
+          <strong>{busy === 'login' ? 'Finish signing in…' : busy === 'sync' ? 'Syncing your audit…' : signedIn === false ? 'Connect your KSU account' : 'Sync from DegreeWorks'}</strong>
+          <span>{busy === 'login'
+            ? 'Use the KSU sign-in window that just opened. It closes on its own when you are done.'
+            : signedIn === false
+              ? 'Opens the KSU sign-in (same as Owl Express) once. Covers DegreeWorks and D2L.'
+              : 'One click. Your KSU session renews automatically.'}</span>
+          <span className={`status-dot ${signedIn ? 'on' : signedIn === false ? 'off' : ''}`}>{signedIn ? 'Connected' : signedIn === false ? 'Not connected' : 'Checking…'}</span>
         </button>
 
         <label className={`welcome-card drop ${drag ? 'dragging' : ''}`}
@@ -56,7 +61,7 @@ export function Welcome({ status, onLoaded }: { status: BridgeStatus | null; onL
           <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={e => void readFile(e.target.files?.[0])} />
           <span className="welcome-icon"><Icon name="upload" size={26} /></span>
           <strong>{busy === 'file' ? 'Reading…' : 'Upload your audit file'}</strong>
-          <span>Drag the JSON from <code>dw --json audit</code> here, or browse for it.</span>
+          <span>Have an audit JSON already? Drag it here, or browse for it.</span>
           <span className="fake-btn" aria-hidden="true"><Icon name="upload" size={16} /> Choose file</span>
         </label>
       </div>
@@ -64,7 +69,7 @@ export function Welcome({ status, onLoaded }: { status: BridgeStatus | null; onL
       {error && (
         <div className="error-banner" role="alert">
           <span>{error}</span>
-          {needsLogin && <button className="btn btn-gold" onClick={signIn} disabled={busy !== null}><Icon name="lock" /> Sign in to DegreeWorks</button>}
+          {needsLogin && <button className="btn btn-gold" onClick={signIn} disabled={busy !== null}><Icon name="lock" /> Connect your KSU account</button>}
         </div>
       )}
 

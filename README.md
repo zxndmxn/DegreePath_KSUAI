@@ -2,7 +2,7 @@
 
 See every path to your KSU graduation. DegreePath reads your DegreeWorks audit, maps what is left against the live KSU class schedule, and lets you try drops, delays and adds before you commit. A local AI agent answers questions about your path and proposes changes that the planner checks first.
 
-Part of the KSU AI Hackathon, alongside [Nudox Lab Ops](https://github.com/zxndmxn/nudox-lab-map).
+Part of the KSU AI Hackathon, alongside [Lab Ops](https://github.com/zxndmxn/nudox-lab-ops).
 
 ## Status
 

@@ -132,6 +132,15 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
                 </li>
               ))}
             </ul>
+            {sheet && (() => {
+              const rules = [...new Set(t.courses.map(c => c.ruleLabel).filter(Boolean))] as string[];
+              return rules.length ? (
+                <div className="term-completes">
+                  <span>This term completes</span>
+                  <div>{rules.map(r => <em key={r}><Icon name="check" size={13} />{r}</em>)}</div>
+                </div>
+              ) : null;
+            })()}
             {plan.finish === t.label && (
               <footer className="grad-ribbon"><Icon name="sparkle" size={16} /> Graduate after {t.label}</footer>
             )}

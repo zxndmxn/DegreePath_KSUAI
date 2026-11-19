@@ -29,7 +29,8 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
   };
 
   return (
-    <main className="page roadmap-page">
+    <main className={`page roadmap-page ${sheet ? 'with-panel' : ''}`}>
+      <div className="rm-main">
       <section className="finish-hero">
         <div className="finish-block">
           <span>{changed ? 'Original finish' : 'Projected finish'}</span>
@@ -103,7 +104,6 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
         </section>
       )}
 
-      <div className={`roadmap-body ${sheet ? 'with-panel' : ''}`}>
       <section className="timeline">
         {plan.terms.map((t, i) => (
           <article key={t.label} className={`term ${i === 0 && t.courses.every(c => c.status === 'in-progress') ? 'current' : ''} ${plan.finish === t.label ? 'final' : ''}`}>
@@ -119,13 +119,12 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
               {t.courses.map(c => (
                 <li key={c.code}>
                   <button className={`course-card risk-${c.status === 'in-progress' ? 'now' : c.risk} ${moved.has(c.code) && view === 'whatif' ? 'pulse' : ''} ${sheet === c.code ? 'selected' : ''}`} onClick={() => setSheet(sheet === c.code ? null : c.code)} aria-pressed={sheet === c.code}>
-                    <span className="course-top">
+                    <span className="cc-row">
                       <span className="code-chip">{c.code}</span>
-                      <span className="risk-tag">{c.status === 'in-progress' ? 'Taking now' : riskLabel[c.risk]}</span>
-                      <span className="hrs"><b>{c.credits}</b> credit hrs</span>
+                      <span className="cc-hrs"><b>{c.credits}</b> cr hrs</span>
                     </span>
-                    <strong>{c.title}</strong>
-                    {c.notes[0] && <small>{c.notes[0]}</small>}
+                    <strong className="cc-title">{c.title}</strong>
+                    <span className="cc-status"><i />{c.status === 'in-progress' ? 'Taking now' : riskLabel[c.risk]}{c.notes[0] ? <em> · {c.notes[0]}</em> : null}</span>
                   </button>
                 </li>
               ))}
@@ -137,8 +136,6 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
         ))}
         {plan.terms.length === 0 && <p className="muted">{plan.blocked.length ? 'No courses can be placed with these changes. Undo a change above or open a blocked course.' : 'Nothing left to schedule.'}</p>}
       </section>
-      {sheet && <CourseSheet key={sheet} s={s} code={sheet} onClose={() => setSheet(null)} />}
-      </div>
 
       <section className="roadmap-foot">
         <AddCourse s={s} />
@@ -147,6 +144,9 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
           <button className="link" onClick={() => setExplain(true)}><Icon name="info" size={15} /> How this is calculated</button>
         </div>
       </section>
+
+      </div>
+      {sheet && <CourseSheet key={sheet} s={s} code={sheet} onClose={() => setSheet(null)} />}
 
       {explain && (
         <Modal title="How your roadmap is calculated" onClose={() => setExplain(false)}>

@@ -2,7 +2,7 @@
 
 A student-first degree-path simulator for the KSU AI hackathon. Change a course decision, compare its impact on your semester plan, and save alternatives.
 
-**Current state:** a working local prototype with fictional data, multi-course scenarios, route comparisons and an optional local It/Codex companion. No KSU connection or official academic audit. Real requirements, student imports, offerings and cross-program evaluation remain unfinished. The browser does not contain a hosted AI model.
+**Current state:** DegreePath reviews manual student entries and DegreeWorks CLI audit files in the browser. The roadmap, multi-course scenarios and optional It/Codex companion use a fictional curriculum. Live KSU sign-in and audit export need an end-to-end check. Imported requirements and actual offerings are still separate from route calculation.
 
 **New:** My plan → **Compare options** compares 12/15/18-credit routes using the same scheduler. **Continue in It** passes the current sample edits to the locally installed workspace; **Ask agent to compare** queues a request and displays the agent's returned explanation. See [setup and limitations](docs/it-integration.md) and [solo walkthrough](docs/demo-run.md).
 
@@ -22,6 +22,10 @@ Open http://127.0.0.1:4173/. Stop with Ctrl+C. The server binds to localhost onl
 This repository is private. The owner invites teammates through Settings → Collaborators; teammates must accept before cloning. No collaborators are automatically added by this setup.
 
 ## Try it
+
+On the home screen, import a DegreeWorks audit or enter your degree progress manually. DegreePath keeps the reviewed fields in your browser. The student view shows applied credits, requirements and courses. Select **Open sample roadmap** to try the planning demo below.
+
+For a real import, use the organizer’s [DegreeWorks CLI](https://github.com/Aaryan-Kapoor/degreeworks-cli). In PowerShell, sign in with `dw login`, then export with `dw --json audit | Set-Content -Encoding utf8 degreeworks-audit.json`. Choose the file in DegreePath. The raw audit and KSU credentials stay outside the app's saved review.
 
 1. Open My plan. The 15-credit baseline finishes Fall 2029.
 2. Click anywhere on Calculus II. Keyboard users can focus a card and press Enter.

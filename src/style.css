@@ -335,13 +335,22 @@ main{padding-top:16px}
 .plan-page .course{grid-template-rows:11px 18px;min-height:44px;padding:6px 11px;align-content:start}
 .plan-page .course-title{font-size:12px;line-height:16px;margin-top:2px}
 .plan-page .course-top>span:first-child{font-size:8px;line-height:11px}
-.plan-page .course-open{width:20px;height:20px;grid-row:1/3;align-self:center}
-.plan-page .course-open svg{width:15px;height:15px}
-.plan-page .course-bottom{font-size:9px;margin-top:2px;align-self:end}
-.plan-page .course-credit{font-size:9px}
+.plan-page .course-credit {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  min-width: 2ch;
+  color: var(--text);
+  font-size: 19px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: right;
+}
 .plan-page .course.moved{grid-template-rows:10px 30px;min-height:52px}
 .plan-page .moved-from{font-size:9px;line-height:12px;margin-top:2px}
 .term>.list-pager{padding:4px 8px;border-top:1px solid var(--line);min-height:31px}
 .term>.list-pager button{min-height:22px;min-width:25px;font-size:17px}
 .term>.list-pager span{font-size:10px}
-@media(min-width:1700px){.plan-page .course-title{font-size:13px}.plan-page .course-top>span:first-child{font-size:9px}.plan-page .course-credit{font-size:10px}}
+@media(min-width:1700px){.plan-page .course-title{font-size:13px}.plan-page .course-top>span:first-child{font-size:9px}}
+.term>header>.term-credit-total{white-space:nowrap}.term-credit-total strong{font-size:17px;font-weight:700;color:var(--text)}

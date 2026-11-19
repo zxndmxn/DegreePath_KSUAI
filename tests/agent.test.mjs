@@ -74,7 +74,7 @@ test('verified what-ifs give the model real outcomes, including summer-only cour
 
 test('questions about a course are answered from the planner, by code or by name', () => {
   const byName = groundQuestion('If I drop my capstone project, when do I graduate?', p, catalog, emptyEdits(), defaultSettings());
-  assert.match(byName, /If the student drops IT 4983 IT Capstone Project, graduation moves to Spring 2027/);
+  assert.match(byName, /If the student drops IT 4983 IT Capstone Project, graduation stays Spring 2027 \(no change\)/);
   const byCode = groundQuestion('what if i drop it4823', p, catalog, emptyEdits(), defaultSettings());
   assert.match(byCode, /drops IT 4823/);
   assert.equal(groundQuestion('hello', p, catalog, emptyEdits(), defaultSettings()), null);

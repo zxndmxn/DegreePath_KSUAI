@@ -234,7 +234,8 @@ export function groundQuestion(question: string, p: Pathway, catalog: Catalog, e
     titleHit(title, q));
   const outcome = (e: PlanEdits, st: PlanSettings) => {
     const r = buildPlan(p, catalog, e, st);
-    return r.finish ? `graduation moves to ${r.finish}` : `graduation is not reachable (${r.blocked.map(b => `${b.code}: ${b.reason}`).join('; ')})`;
+    if (!r.finish) return `graduation is not reachable (${r.blocked.map(b => `${b.code}: ${b.reason}`).join('; ')})`;
+    return r.finish === plan.finish ? `graduation stays ${r.finish} (no change)` : `graduation moves to ${r.finish}`;
   };
   const facts: string[] = [];
   const now = plan.finish ? `Current finish is ${plan.finish}.` : 'Graduation is currently not reachable.';

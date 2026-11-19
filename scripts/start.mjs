@@ -1,9 +1,11 @@
 // One-click start: installs dependencies if needed, wakes the optional local AI, starts the app and opens it.
-// DegreePath works fully without the AI; if Ollama is missing the assistant simply shows as offline.
+// The assistant sets itself up in the background (installs Ollama and a 1 GB model the first time).
+// DegreePath works fully while that happens, and without it.
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ensureAgent } from './agent-auto.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const URL_ = 'http://127.0.0.1:4173/';
@@ -28,19 +30,11 @@ if (!existsSync(join(root, 'node_modules', 'vite'))) {
   if (r.status !== 0) { log('Install failed. Check your internet connection and try again.'); process.exit(1); }
 }
 
-// Optional AI: start Ollama quietly if it is installed and not already running.
-const ollama = [process.env.OLLAMA_BIN, process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, 'Programs', 'Ollama', 'ollama.exe')].find(p => p && existsSync(p));
-if (await up('http://127.0.0.1:11434/api/tags')) log('Assistant: ready.');
-else if (ollama) {
-  spawn(ollama, ['serve'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
-  log('Assistant: starting in the background.');
-} else log('Assistant: not installed. Everything else works. (Optional: install Ollama, then npm run agent:setup.)');
-
 log('Starting the app…');
 const env = { ...process.env, NODE_ENV: 'development' };
 const server = spawn(npm, ['run', 'dev'], { cwd: root, env, stdio: ['ignore', 'pipe', 'inherit'], shell: win });
 server.stdout.on('data', () => {});
 for (let i = 0; i < 60 && !(await up(URL_)); i++) await new Promise(r => setTimeout(r, 500));
-if (await up(URL_)) { log(`Open at ${URL_} (leave this window open; close it to stop DegreePath).`); openBrowser(URL_); }
+if (await up(URL_)) { log(`Open at ${URL_} (leave this window open; close it to stop DegreePath).`); openBrowser(URL_); void ensureAgent(root, log); }
 else log('The app did not start. Run npm run dev to see the error.');
 server.on('exit', code => process.exit(code ?? 0));

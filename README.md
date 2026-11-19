@@ -15,7 +15,7 @@ Part of the KSU AI Hackathon, alongside [Nudox Lab Ops](https://github.com/zxndm
 | What-if: drop, take later, add a course, credit cap, summer | Working, previewed before you apply |
 | Compare and saved plans | Working |
 | Optional local assistant (Ollama, Qwen 2.5 1.5B) | Working, grounded in planner results; app works without it |
-| One-click launcher and desktop shortcut | Working |
+| One-click launcher: installs packages, assistant and model on first run | Working |
 | Floating assistant with page hints | Working |
 
 ## Quick start
@@ -24,7 +24,7 @@ Part of the KSU AI Hackathon, alongside [Nudox Lab Ops](https://github.com/zxndm
 
 Needs Node.js 22.18+ and Microsoft Edge or Google Chrome (every Windows PC has Edge). On first launch click **Connect your KSU account**: the normal KSU Microsoft sign-in opens once, the same one as Owl Express. That one sign-in covers DegreeWorks and D2L and renews itself in the background. No Python or extra tools.
 
-**The assistant is optional.** DegreePath works fully without it. To turn it on, install [Ollama](https://ollama.com) and run `npm run agent:setup` once. It uses Qwen 2.5 1.5B (about 1 GB), small enough for nearly any laptop.
+**The assistant sets itself up.** The first time you launch, DegreePath installs [Ollama](https://ollama.com) if it is missing (via winget on Windows) and downloads Qwen 2.5 1.5B (about 1 GB) in the background. The app is usable the whole time and the chat shows progress. Skip it with `DEGREEPATH_NO_AI=1`. `npm run agent:setup` does the same thing by hand.
 
 Developers can also run `npm install --include=dev` then `npm run dev`. On Windows, if PowerShell blocks `npm`, use `cmd /c npm ...`.
 

@@ -82,7 +82,7 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
       <header className="chat-head">
         <div>
           <h2><Icon name="sparkle" size={18} /> Ask DegreePath</h2>
-          <span className={`status-dot ${online ? 'on' : 'off'}`}>{!online ? 'Agent offline' : warm === 'warming' ? 'Reading your plan…' : `Local agent · ${status!.agent.model} · on this computer`}</span>
+          <span className={`status-dot ${online ? 'on' : 'off'}`}>{!online ? (settingUp(status) ? 'Setting up…' : 'Agent offline') : warm === 'warming' ? 'Reading your plan…' : `Local agent · ${status!.agent.model} · on this computer`}</span>
         </div>
         <button className="icon-btn big" onClick={onClose} aria-label="Close assistant"><Icon name="close" size={22} /></button>
       </header>
@@ -91,7 +91,7 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
         {msgs.length === 0 && (
           <div className="chat-empty">
             <p>I know your audit, your roadmap and the live KSU schedule. Ask anything about your path. Every change I suggest is checked by the planner before you apply it.</p>
-            {!online && <p className="chat-offline">The assistant is optional and is off right now. Everything else in DegreePath works without it. To turn it on, install Ollama and run <code>npm run agent:setup</code> once.</p>}
+            {!online && <p className="chat-offline">{setupNote(status)}</p>}
             <div className="starter-grid">
               {STARTERS.map(q => <button key={q} className="starter" disabled={!online} onClick={() => void send(q)}>{q}</button>)}
             </div>
@@ -116,9 +116,21 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
       </div>
 
       <form className="chat-input" onSubmit={e => { e.preventDefault(); void send(text); }}>
-        <input value={text} onChange={e => setText(e.target.value)} placeholder={online ? 'Ask about your path…' : 'Agent offline'} disabled={!online || busy} maxLength={600} />
+        <input value={text} onChange={e => setText(e.target.value)} placeholder={online ? 'Ask about your path…' : settingUp(status) ? 'Assistant is setting up…' : 'Agent offline'} disabled={!online || busy} maxLength={600} />
         <button className="send" type="submit" disabled={!online || busy || !text.trim()} aria-label="Send"><Icon name="send" size={18} /></button>
       </form>
     </aside>
   );
+}
+
+function settingUp(status: BridgeStatus | null) {
+  const st = status?.agent.setup?.state;
+  return st === 'installing' || st === 'downloading' || st === 'starting' || st === 'building';
+}
+
+function setupNote(status: BridgeStatus | null) {
+  const setup = status?.agent.setup;
+  if (settingUp(status)) return `${setup!.message} This happens once. Everything else in DegreePath works meanwhile.`;
+  if (setup?.state === 'unavailable') return `${setup.message} Everything else in DegreePath works without it.`;
+  return 'The assistant is off right now. Restart DegreePath with the launcher and it sets itself up. Everything else works without it.';
 }

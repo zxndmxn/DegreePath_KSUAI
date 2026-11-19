@@ -136,12 +136,14 @@ export function degreePathBridge(root: string): Plugin {
   }
 
   async function agentStatus() {
+    let setup: { state: string; message: string; pct: number | null } | null = null;
+    try { setup = JSON.parse(await readFile(join(root, '.cache', 'agent-setup.json'), 'utf8')); } catch { /* no setup yet */ }
     try {
       const res = await fetch(`${OLLAMA}/api/tags`, { signal: AbortSignal.timeout(2000) });
       const tags = (await res.json()) as { models?: { name: string }[] };
       const names = (tags.models ?? []).map(m => m.name);
-      return { running: true, model: names.some(n => n.startsWith(MODEL)) ? MODEL : names.some(n => n.startsWith(FALLBACK_MODEL)) ? FALLBACK_MODEL : null };
-    } catch { return { running: false, model: null }; }
+      return { running: true, model: names.some(n => n.startsWith(MODEL)) ? MODEL : names.some(n => n.startsWith(FALLBACK_MODEL)) ? FALLBACK_MODEL : null, setup };
+    } catch { return { running: false, model: null, setup }; }
   }
 
   const prefix = (context: string) => [

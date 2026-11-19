@@ -12,7 +12,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 export interface BridgeStatus {
   degreeworks: { signedIn: boolean };
   d2l: { connected: boolean };
-  agent: { running: boolean; model: string | null };
+  agent: { running: boolean; model: string | null; setup: { state: string; message: string; pct: number | null } | null };
 }
 
 export const api = {

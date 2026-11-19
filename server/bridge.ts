@@ -33,6 +33,23 @@ async function dw(args: string[], timeout = 60_000): Promise<unknown> {
   return JSON.parse(stdout);
 }
 
+// The CLI's token lasts about 90 minutes. Its saved Edge profile can renew it without a window.
+let refreshing: Promise<boolean> | null = null;
+function silentRefresh(): Promise<boolean> {
+  refreshing ??= run(dwPath(), ['login', '--headless', '--channel', 'msedge'], { timeout: 90_000, windowsHide: true })
+    .then(() => true, () => false)
+    .finally(() => { setTimeout(() => { refreshing = null; }, 1000); });
+  return refreshing;
+}
+
+async function dwFresh(args: string[], timeout?: number): Promise<unknown> {
+  try { return await dw(args, timeout); }
+  catch {
+    if (!(await silentRefresh())) throw Object.assign(new Error('needs-login'), { needsLogin: true });
+    return dw(args, timeout);
+  }
+}
+
 async function body(req: Connect.IncomingMessage, limit = 64_000): Promise<unknown> {
   let text = '';
   for await (const chunk of req) {
@@ -76,7 +93,7 @@ export function degreePathBridge(root: string): Plugin {
       while (todo.length) {
         const code = todo.shift()!;
         const [subj, num] = code.split(' ');
-        try { out[code] = c[code] = parseCourseInfo(await dw(['course', subj, num], 45_000), code); }
+        try { out[code] = c[code] = parseCourseInfo(await dwFresh(['course', subj, num], 45_000), code); }
         catch { out[code] = c[code] ?? null; }
         changed = true;
       }
@@ -96,6 +113,36 @@ export function degreePathBridge(root: string): Plugin {
     });
     if (!res.ok) throw Object.assign(new Error(await res.text()), { status: res.status });
     return (await res.json()) as { message?: { content?: string } };
+  }
+
+  // Streams the model's raw output; onToken gets each piece as it arrives. Returns the full text.
+  async function ollamaStream(model: string, messages: unknown[], onToken: (t: string) => void): Promise<string> {
+    const res = await fetch(`${OLLAMA}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, stream: true, format: AGENT_ACTIONS_SCHEMA, keep_alive: '30m',
+        options: { temperature: 0.2, num_ctx: 8192, ...(GPU_LAYERS === undefined ? {} : { num_gpu: GPU_LAYERS }) } }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!res.ok || !res.body) throw new Error(await res.text());
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let full = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = buffer.indexOf('\n')) >= 0) {
+        const line = buffer.slice(0, nl).trim();
+        buffer = buffer.slice(nl + 1);
+        if (!line) continue;
+        const piece = (JSON.parse(line) as { message?: { content?: string } }).message?.content ?? '';
+        if (piece) { full += piece; onToken(piece); }
+      }
+    }
+    return full;
   }
 
   async function agentStatus() {
@@ -127,8 +174,17 @@ export function degreePathBridge(root: string): Plugin {
         return send(200, { degreeworks: { signedIn }, agent: await agentStatus() });
       }
       if (url === '/api/audit/sync' && req.method === 'POST') {
-        try { return send(200, { pathway: parseAudit(await dw(['audit'], 90_000)) }); }
-        catch { return send(502, { error: 'Could not reach DegreeWorks. Run dw login once, then try again.' }); }
+        try { return send(200, { pathway: parseAudit(await dwFresh(['audit'], 90_000)) }); }
+        catch (e) {
+          return (e as { needsLogin?: boolean }).needsLogin
+            ? send(401, { error: 'Your DegreeWorks sign-in expired. Click Sign in to DegreeWorks to renew it.', needsLogin: true })
+            : send(502, { error: 'Could not reach DegreeWorks right now. Try again in a minute.' });
+        }
+      }
+      if (url === '/api/login' && req.method === 'POST') {
+        // Opens a one-time KSU SSO window; the CLI captures the session and closes it.
+        try { await run(dwPath(), ['login', '--channel', 'msedge'], { timeout: 300_000, windowsHide: false }); return send(200, { ok: true }); }
+        catch { return send(502, { error: 'Sign-in did not finish. Try again.' }); }
       }
       if (url === '/api/courses' && req.method === 'POST') {
         const { codes } = (await body(req)) as { codes?: unknown };
@@ -145,7 +201,7 @@ export function degreePathBridge(root: string): Plugin {
         await ollamaChat(status.model, prefix(context), { num_predict: 1 });
         return send(200, { warmedMs: Date.now() - started });
       }
-      if (url === '/api/agent' && req.method === 'POST') {
+      if (url.split('?')[0] === '/api/agent' && req.method === 'POST') {
         const { messages, context } = (await body(req, 120_000)) as { messages?: unknown; context?: unknown };
         if (!Array.isArray(messages) || typeof context !== 'string' || context.length > 40_000) return send(400, { error: 'Bad request.' });
         const chat = messages.slice(-12).flatMap(m => {
@@ -156,6 +212,17 @@ export function degreePathBridge(root: string): Plugin {
         const status = await agentStatus();
         if (!status.running || !status.model) return send(503, { error: 'The local agent is offline. Start Ollama and run npm run agent:setup.' });
         const prompt = [...prefix(context), ...chat];
+        if (url.endsWith('?stream=1') || req.url?.includes('stream=1')) {
+          res.setHeader('Content-Type', 'application/x-ndjson');
+          const line = (d: unknown) => res.write(JSON.stringify(d) + '\n');
+          let raw = await ollamaStream(status.model, prompt, t => line({ t }));
+          if (looksBroken(raw)) {
+            line({ reset: true });
+            raw = (await ollamaChat(status.model, prompt, { temperature: 0.4, seed: Date.now() % 100000 })).message?.content ?? '';
+          }
+          line(looksBroken(raw) ? { error: 'The local agent gave a garbled answer. Ask again, or restart Ollama.' } : { done: true, ...validateAgentReply(raw) });
+          return res.end();
+        }
         let raw = (await ollamaChat(status.model, prompt)).message?.content ?? '';
         if (looksBroken(raw)) raw = (await ollamaChat(status.model, prompt, { temperature: 0.4, seed: Date.now() % 100000 })).message?.content ?? '';
         if (looksBroken(raw)) return send(502, { error: 'The local agent gave a garbled answer. Ask again, or restart Ollama.' });

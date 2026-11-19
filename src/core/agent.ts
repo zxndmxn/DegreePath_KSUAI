@@ -1,4 +1,4 @@
-import type { Catalog } from './plan.ts';
+import { buildPlan, type Catalog } from './plan.ts';
 import type { Pathway, Plan, PlanEdits, PlanSettings } from './types.ts';
 import { prereqText } from './catalog.ts';
 
@@ -24,7 +24,8 @@ Ground rules:
 
 How to answer:
 - Reply in at most 4 short sentences, plain and friendly, no lists unless asked. Lead with the answer.
-- When the student wants to try a change, put it in "actions" and describe the expected effect using the CURRENT PLAN and COURSE FACTS. The app will show the verified result next to your reply.
+- When the student wants to try a change, put it in "actions" and state its effect exactly as written in VERIFIED WHAT-IFS. Never compute a finish date yourself.
+- If the student's message ends with a [PLANNER RESULT], that result is correct. Restate it in plain words and do not contradict it. The app will show the verified result next to your reply.
 - Mention risks you can see in the context: a course not on the published schedule, few open seats, a same-term co-requisite, or a blocked requirement.
 - If nothing should change, return an empty "actions" list.
 
@@ -62,6 +63,27 @@ export const AGENT_ACTIONS_SCHEMA = {
 const CODE = /^[A-Z]{2,5} \d{4}[A-Z]?$/;
 const TERM = /^(Spring|Summer|Fall) \d{4}$/;
 const normCode = (v: unknown) => (typeof v === 'string' ? v.trim().toUpperCase().replace(/^([A-Z]{2,5})\s*(\d{4}[A-Z]?)$/, '$1 $2') : '');
+
+// Pulls the readable part of "reply" out of a JSON answer that is still streaming in.
+export function partialReply(raw: string): string {
+  const m = /"reply"\s*:\s*"/.exec(raw);
+  if (!m) return '';
+  let out = '';
+  for (let i = m.index + m[0].length; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === '"') break;
+    if (ch === '\\') {
+      const nx = raw[i + 1];
+      if (nx === undefined) break;
+      out += nx === 'n' ? '\n' : nx === 't' ? ' ' : nx === 'u' ? '' : nx;
+      if (nx === 'u') i += 4;
+      i += 1;
+      continue;
+    }
+    out += ch;
+  }
+  return out;
+}
 
 // True when the model returned a fragment instead of an answer (a known failure on some GPU backends).
 export function looksBroken(raw: string): boolean {
@@ -148,6 +170,8 @@ export function buildContext(p: Pathway, plan: Plan, edits: PlanEdits, settings:
   lines.push('CURRENT PLAN:');
   for (const t of plan.terms) lines.push(`- ${t.label} (${t.credits} cr): ${t.courses.map(c => `${c.code}${c.status === 'in-progress' ? ' [in progress]' : ''}${c.notes.length ? ` [${c.notes.join('; ')}]` : ''}`).join(', ')}`);
   for (const b of plan.blocked) lines.push(`- BLOCKED ${b.code}: ${b.reason}`);
+  lines.push('VERIFIED WHAT-IFS (computed by the DegreePath planner; use these numbers, never guess):');
+  lines.push(...whatIfFacts(p, catalog, edits, settings));
   lines.push('COURSE FACTS:');
   for (const info of Object.values(catalog)) {
     if (!info) continue;
@@ -155,4 +179,102 @@ export function buildContext(p: Pathway, plan: Plan, edits: PlanEdits, settings:
     lines.push(`- ${info.code} ${info.title}, ${info.credits} cr. Offered: ${info.offered.join(', ') || 'not on published schedule'}${seats ? ` (${seats})` : ''}. Prereqs: ${prereqText(info.prereq) || 'none'}.`);
   }
   return lines.join('\n').slice(0, 38_000);
+}
+
+// Pre-computes the outcomes students ask about most, so the model reads answers instead of guessing.
+export function whatIfFacts(p: Pathway, catalog: Catalog, edits: PlanEdits, settings: PlanSettings): string[] {
+  const out: string[] = [];
+  const describe = (e: PlanEdits, st: PlanSettings) => {
+    const r = buildPlan(p, catalog, e, st);
+    return r.finish ? `finish ${r.finish}` : `graduation not reachable (${r.blocked.map(b => `${b.code}: ${b.reason}`).join('; ') || 'a requirement has no course picked'})`;
+  };
+  const current = p.inProgress.filter(c => !edits.drop.includes(c.code));
+  for (const c of current) {
+    const e = { ...edits, drop: [...edits.drop, c.code] };
+    let line = `- Drop ${c.code} ${c.title}: ${describe(e, settings)}`;
+    if (!settings.summer) {
+      const withSummer = describe(e, { ...settings, summer: true });
+      if (withSummer !== describe(e, settings)) line += `; with summer allowed: ${withSummer}`;
+    }
+    out.push(line);
+  }
+  const planned = buildPlan(p, catalog, edits, settings).terms.flatMap(t => t.courses.filter(c => c.status === 'planned').map(c => ({ c, term: t.label })));
+  for (const { c, term } of planned.slice(0, 8)) {
+    const later = nextAfter(term, settings.summer);
+    out.push(`- Move ${c.code} to ${later} or later: ${describe({ ...edits, defer: { ...edits.defer, [c.code]: later } }, settings)}`);
+  }
+  for (const n of [12, 18]) if (n !== settings.maxCredits) out.push(`- ${n} credit hours per term instead of ${settings.maxCredits}: ${describe(edits, { ...settings, maxCredits: n })}`);
+  if (!settings.summer) out.push(`- Allow summer terms: ${describe(edits, { ...settings, summer: true })}`);
+  return out.length ? out : ['- No alternatives to compute.'];
+}
+
+function nextAfter(term: string, summer: boolean): string {
+  const m = /^(Spring|Summer|Fall) (\d{4})$/.exec(term);
+  if (!m) return term;
+  const y = Number(m[2]);
+  if (m[1] === 'Fall') return `Spring ${y + 1}`;
+  if (m[1] === 'Spring') return summer ? `Summer ${y}` : `Fall ${y}`;
+  return `Fall ${y}`;
+}
+
+// Finds the change a question is about and computes its real outcome with the planner,
+// so the model phrases a verified answer instead of inventing dates.
+export function groundQuestion(question: string, p: Pathway, catalog: Catalog, edits: PlanEdits, settings: PlanSettings): string | null {
+  const q = question.toLowerCase();
+  const compact = q.replace(/\s+/g, '');
+  const plan = buildPlan(p, catalog, edits, settings);
+  const placed = new Map(plan.terms.flatMap(t => t.courses.map(c => [c.code, { title: c.title, term: t.label, now: c.status === 'in-progress' }] as const)));
+  const titles = new Map<string, string>([...p.inProgress.map(c => [c.code, c.title] as const), ...[...placed].map(([c, v]) => [c, v.title] as const)]);
+  const mentioned = [...titles].filter(([code, title]) =>
+    compact.includes(code.toLowerCase().replace(' ', '')) || (title.length >= 6 && q.includes(title.toLowerCase())) ||
+    titleHit(title, q));
+  const outcome = (e: PlanEdits, st: PlanSettings) => {
+    const r = buildPlan(p, catalog, e, st);
+    return r.finish ? `graduation moves to ${r.finish}` : `graduation is not reachable (${r.blocked.map(b => `${b.code}: ${b.reason}`).join('; ')})`;
+  };
+  const facts: string[] = [];
+  const now = plan.finish ? `Current finish is ${plan.finish}.` : 'Graduation is currently not reachable.';
+  const wantsDrop = /\b(drop|withdraw|remove|quit|skip|fail)\b/.test(q);
+  const wantsLater = /\b(later|delay|postpone|push|defer|move|wait|next (semester|term|year))\b/.test(q);
+  for (const [code, title] of mentioned.slice(0, 2)) {
+    const where = placed.get(code);
+    if (wantsDrop || (!wantsLater && where?.now)) {
+      if (p.inProgress.some(c => c.code === code)) {
+        const e = { ...edits, drop: [...new Set([...edits.drop, code])] };
+        let f = `If the student drops ${code} ${title}, ${outcome(e, settings)}.`;
+        if (!settings.summer) { const w = outcome(e, { ...settings, summer: true }); if (w !== outcome(e, settings)) f += ` If they also allow summer terms, ${w}.`; }
+        facts.push(f);
+      }
+    }
+    if (wantsLater && where) {
+      const after = buildPlan(p, catalog, { ...edits, defer: { ...edits.defer, [code]: nextLabel(where.term) } }, settings);
+      const e = { ...edits, defer: { ...edits.defer, [code]: nextLabel(where.term) }, drop: where.now ? [...new Set([...edits.drop, code])] : edits.drop };
+      facts.push(`If ${code} waits until ${nextLabel(where.term)} or later, ${outcome(e, settings)}.${after ? '' : ''}`);
+    }
+  }
+  const credit = /\b(\d{1,2})\s*(credit|hour|hrs)/.exec(q);
+  if (credit && +credit[1] >= 6 && +credit[1] <= 21) facts.push(`At ${credit[1]} credit hours per term, ${outcome(edits, { ...settings, maxCredits: +credit[1] })}.`);
+  else if (/\blighter\b|\bfewer\b|\bless\b/.test(q)) facts.push(`At 12 credit hours per term, ${outcome(edits, { ...settings, maxCredits: 12 })}.`);
+  if (/\bsummer\b/.test(q) && !settings.summer) facts.push(`With summer terms allowed, ${outcome(edits, { ...settings, summer: true })}.`);
+  if (/\bsooner\b|\bfaster\b|\bearlier\b/.test(q)) {
+    const best = [{ ...settings, summer: true }, { ...settings, maxCredits: 18 }, { ...settings, summer: true, maxCredits: 18 }]
+      .map(st => ({ st, r: buildPlan(p, catalog, edits, st) })).filter(x => x.r.finish);
+    facts.push(best.length ? `Options: ${best.map(x => `${x.st.maxCredits} credit hrs${x.st.summer ? ' with summer' : ''} finishes ${x.r.finish}`).join('; ')}.` : 'No faster option exists with these courses.');
+  }
+  if (!facts.length) return null;
+  return `${now} ${facts.join(' ')}`;
+}
+
+function nextLabel(term: string): string {
+  const m = /^(Spring|Summer|Fall) (\d{4})$/.exec(term);
+  if (!m) return term;
+  return m[1] === 'Fall' ? `Spring ${+m[2] + 1}` : `Fall ${m[2]}`;
+}
+
+const STOP = new Set(['and', 'the', 'for', 'with', 'intro', 'introduction', 'project', 'course', 'advanced', 'principles', 'information', 'systems', 'technology']);
+// A course is "mentioned" when a distinctive title word (6+ letters) or two title words appear.
+function titleHit(title: string, q: string): boolean {
+  const words = title.toLowerCase().replace(/[^a-z ]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !STOP.has(w));
+  const hits = words.filter(w => new RegExp(`\\b${w}`).test(q));
+  return hits.some(w => w.length >= 6) || hits.length >= 2;
 }

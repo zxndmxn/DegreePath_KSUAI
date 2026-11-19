@@ -8,6 +8,7 @@ import { Roadmap } from './ui/Roadmap.tsx';
 import { Compare } from './ui/Compare.tsx';
 import { Plans } from './ui/Plans.tsx';
 import { Chat } from './ui/Chat.tsx';
+import { ChatFab } from './ui/ChatFab.tsx';
 
 type View = 'progress' | 'roadmap' | 'compare' | 'plans';
 const NAV: { id: View; label: string; icon: string }[] = [
@@ -39,7 +40,13 @@ export function App() {
   async function refresh() {
     setRefreshing(true);
     try { s.setPathway(await api.syncAudit()); setToast('Audit refreshed from DegreeWorks.'); }
-    catch (e) { setToast(e instanceof Error ? e.message : 'Refresh failed.'); }
+    catch (e) {
+      if ((e as { needsLogin?: boolean }).needsLogin) {
+        setToast('Opening a one-time KSU sign-in window…');
+        try { await api.login(); s.setPathway(await api.syncAudit()); setToast('Signed in and refreshed.'); }
+        catch (e2) { setToast(e2 instanceof Error ? e2.message : 'Sign-in failed.'); }
+      } else setToast(e instanceof Error ? e.message : 'Refresh failed.');
+    }
     finally { setRefreshing(false); }
   }
   const ask = (q: string) => { setSeed(q); setChatOpen(true); };
@@ -97,6 +104,7 @@ export function App() {
         </div>
       )}
 
+      {s.pathway && <ChatFab s={s} view={view} chatOpen={chatOpen} onOpen={q => (q ? ask(q) : setChatOpen(true))} />}
       {s.pathway && <Chat s={s} status={status} open={chatOpen} onClose={() => setChatOpen(false)} seed={seed} onSeedUsed={() => setSeed(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>

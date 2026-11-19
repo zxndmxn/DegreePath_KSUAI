@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { DegreePathState } from '../store.ts';
 import type { Plan } from '../core/types.ts';
 import { describeAction } from '../core/agent.ts';
-import { Credits, FlyArrow, Icon, Modal, coverageColor, riskLabel } from './bits.tsx';
+import { FlyArrow, Icon, Modal, coverageColor, riskLabel } from './bits.tsx';
 import { CourseSheet } from './CourseSheet.tsx';
 import { AddCourse } from './AddCourse.tsx';
 
@@ -106,7 +106,7 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
       <div className={`roadmap-body ${sheet ? 'with-panel' : ''}`}>
       <section className="timeline">
         {plan.terms.map((t, i) => (
-          <article key={t.label} className={`term ${i === 0 && t.courses.every(c => c.status === 'in-progress') ? 'current' : ''}`}>
+          <article key={t.label} className={`term ${i === 0 && t.courses.every(c => c.status === 'in-progress') ? 'current' : ''} ${plan.finish === t.label ? 'final' : ''}`}>
             <header>
               <div><span className="term-index">{String(i + 1).padStart(2, '0')}</span><h3>{t.label}</h3></div>
               <span className="term-credits"><b>{t.credits}</b> / {t.label.startsWith('Summer') ? Math.min(9, s.settings.maxCredits) : s.settings.maxCredits} credit hrs</span>
@@ -119,24 +119,23 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
               {t.courses.map(c => (
                 <li key={c.code}>
                   <button className={`course-card risk-${c.status === 'in-progress' ? 'now' : c.risk} ${moved.has(c.code) && view === 'whatif' ? 'pulse' : ''} ${sheet === c.code ? 'selected' : ''}`} onClick={() => setSheet(sheet === c.code ? null : c.code)} aria-pressed={sheet === c.code}>
-                    <span className="course-meta"><span className="code-chip">{c.code}</span><span className="risk-tag">{c.status === 'in-progress' ? 'Taking now' : riskLabel[c.risk]}</span></span>
+                    <span className="course-top">
+                      <span className="code-chip">{c.code}</span>
+                      <span className="risk-tag">{c.status === 'in-progress' ? 'Taking now' : riskLabel[c.risk]}</span>
+                      <span className="hrs"><b>{c.credits}</b> credit hrs</span>
+                    </span>
                     <strong>{c.title}</strong>
                     {c.notes[0] && <small>{c.notes[0]}</small>}
-                    <Credits n={c.credits} />
                   </button>
                 </li>
               ))}
             </ul>
+            {plan.finish === t.label && (
+              <footer className="grad-ribbon"><Icon name="sparkle" size={16} /> Graduate after {t.label}</footer>
+            )}
           </article>
         ))}
         {plan.terms.length === 0 && <p className="muted">{plan.blocked.length ? 'No courses can be placed with these changes. Undo a change above or open a blocked course.' : 'Nothing left to schedule.'}</p>}
-        {plan.finish && (
-          <article className="term grad">
-            <Icon name="sparkle" size={34} />
-            <h3>Graduate</h3>
-            <p>{plan.finish}</p>
-          </article>
-        )}
       </section>
       {sheet && <CourseSheet key={sheet} s={s} code={sheet} onClose={() => setSheet(null)} />}
       </div>

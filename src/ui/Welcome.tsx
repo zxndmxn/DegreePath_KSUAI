@@ -8,12 +8,19 @@ export function Welcome({ status, onLoaded }: { status: BridgeStatus | null; onL
   const [busy, setBusy] = useState<'sync' | 'file' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
+  const [needsLogin, setNeedsLogin] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function sync() {
     setBusy('sync'); setError(null);
     try { onLoaded(await api.syncAudit()); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Sync failed.'); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Sync failed.'); setNeedsLogin(!!(e as { needsLogin?: boolean }).needsLogin); }
+    finally { setBusy(null); }
+  }
+  async function signIn() {
+    setBusy('sync'); setError(null);
+    try { await api.login(); setNeedsLogin(false); onLoaded(await api.syncAudit()); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Sign-in failed.'); }
     finally { setBusy(null); }
   }
   async function readFile(file?: File | null) {
@@ -39,7 +46,7 @@ export function Welcome({ status, onLoaded }: { status: BridgeStatus | null; onL
         <button className="welcome-card primary" onClick={sync} disabled={busy !== null}>
           <span className="welcome-icon"><Icon name="refresh" size={26} /></span>
           <strong>{busy === 'sync' ? 'Syncing your audit…' : 'Sync from DegreeWorks'}</strong>
-          <span>{signedIn === false ? 'Run dw login once on this computer, then sync.' : 'One click. Uses your local DegreeWorks session.'}</span>
+          <span>{signedIn === false ? 'Sign in once on this computer, then sync.' : 'One click. Renews your DegreeWorks session automatically.'}</span>
           <span className={`status-dot ${signedIn ? 'on' : signedIn === false ? 'off' : ''}`}>{signedIn ? 'Session ready' : signedIn === false ? 'Not signed in' : 'Checking…'}</span>
         </button>
 
@@ -54,7 +61,12 @@ export function Welcome({ status, onLoaded }: { status: BridgeStatus | null; onL
         </label>
       </div>
 
-      {error && <p className="error-banner" role="alert">{error}</p>}
+      {error && (
+        <div className="error-banner" role="alert">
+          <span>{error}</span>
+          {needsLogin && <button className="btn btn-gold" onClick={signIn} disabled={busy !== null}><Icon name="lock" /> Sign in to DegreeWorks</button>}
+        </div>
+      )}
 
       <p className="privacy-note"><Icon name="lock" size={15} /> Runs on this computer. Grades, GPA, name and student ID are never kept.</p>
     </main>

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { parseAudit } from '../src/core/audit.ts';
 import { parseCourseInfo } from '../src/core/catalog.ts';
 import { buildPlan, defaultSettings, emptyEdits } from '../src/core/plan.ts';
-import { applyAction, buildContext, looksBroken, validateAgentReply } from '../src/core/agent.ts';
+import { applyAction, buildContext, groundQuestion, looksBroken, partialReply, validateAgentReply } from '../src/core/agent.ts';
 import { audit, courseRaw } from './fixtures.mjs';
 
 const p = parseAudit(audit);
@@ -57,4 +57,26 @@ test('context spells out what is left, including blocked courses', () => {
   const plan = buildPlan(p, catalog, { ...emptyEdits(), drop: ['IT 4983'] }, defaultSettings());
   const ctx = buildContext(p, plan, { ...emptyEdits(), drop: ['IT 4983'] }, defaultSettings(), catalog, 'Spring 2027');
   assert.match(ctx, /WHAT IS LEFT TO GRADUATE: pass IT 4823 this term; take .*IT 4983 in Spring 2027/);
+});
+
+test('a half-streamed JSON answer shows its reply text so far', () => {
+  assert.equal(partialReply('{"reply": "You have two cour'), 'You have two cour');
+  assert.equal(partialReply('{"reply":"Say \\"hi\\"\\nnow","actions":[]}'), 'Say "hi"\nnow');
+  assert.equal(partialReply('{"act'), '');
+});
+
+test('verified what-ifs give the model real outcomes, including summer-only courses', () => {
+  const plan = buildPlan(p, catalog, emptyEdits(), defaultSettings());
+  const ctx = buildContext(p, plan, emptyEdits(), defaultSettings(), catalog, plan.finish);
+  assert.match(ctx, /- Drop IT 4983 IT Capstone Project: finish Spring 2027/);
+  assert.match(ctx, /VERIFIED WHAT-IFS/);
+});
+
+test('questions about a course are answered from the planner, by code or by name', () => {
+  const byName = groundQuestion('If I drop my capstone project, when do I graduate?', p, catalog, emptyEdits(), defaultSettings());
+  assert.match(byName, /If the student drops IT 4983 IT Capstone Project, graduation moves to Spring 2027/);
+  const byCode = groundQuestion('what if i drop it4823', p, catalog, emptyEdits(), defaultSettings());
+  assert.match(byCode, /drops IT 4823/);
+  assert.equal(groundQuestion('hello', p, catalog, emptyEdits(), defaultSettings()), null);
+  assert.match(groundQuestion('can I finish sooner?', p, catalog, emptyEdits(), defaultSettings()), /Options:/);
 });

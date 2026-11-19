@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DegreePathState } from '../store.ts';
 import { api, type BridgeStatus } from '../api.ts';
-import { applyAction, buildContext, describeAction, type AgentAction } from '../core/agent.ts';
+import { applyAction, buildContext, describeAction, groundQuestion, type AgentAction } from '../core/agent.ts';
 import { Icon } from './bits.tsx';
 
-interface Msg { role: 'user' | 'assistant'; content: string; actions?: AgentAction[]; applied?: boolean[] }
+interface Msg { role: 'user' | 'assistant'; content: string; sent?: string; actions?: AgentAction[]; applied?: boolean[]; streaming?: boolean }
 
 const STARTERS = [
   'What do I have left to graduate?',
@@ -39,10 +39,12 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
   async function send(q: string) {
     const question = q.trim();
     if (!question || busy || !s.plan) return;
-    const next: Msg[] = [...msgs, { role: 'user', content: question }];
+    const fact = groundQuestion(question, p, s.catalog, s.edits, s.settings);
+    const next: Msg[] = [...msgs, { role: 'user', content: question, sent: fact ? `${question}\n\n[PLANNER RESULT, verified, restate it: ${fact}]` : question }];
     setMsgs(next); setText(''); setBusy(true);
     try {
-      const r = await api.agent(next.map(m => ({ role: m.role, content: m.content })), context);
+      const r = await api.agentStream(next.map(m => ({ role: m.role, content: m.sent ?? m.content })), context,
+        text => setMsgs([...next, { role: 'assistant', content: text, streaming: true }]));
       const actions = r.actions.filter(a => applyAction(a, s.edits, s.settings, known, inProgress));
       setMsgs([...next, { role: 'assistant', content: r.reply, actions, applied: actions.map(() => false) }]);
     } catch (e) {
@@ -87,9 +89,9 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
             </div>
           </div>
         )}
-        {msgs.map((m, i) => (
-          <div key={i} className={`msg ${m.role}`}>
-            <p>{m.content}</p>
+        {msgs.filter(m => !(m.streaming && !m.content)).map((m, i) => (
+          <div key={i} className={`msg ${m.role} ${m.streaming ? 'streaming' : ''}`}>
+            <p>{m.content}{m.streaming && <i className="caret" />}</p>
             {m.actions?.length ? (
               <div className="msg-actions">
                 {m.actions.map((a, j) => (
@@ -102,7 +104,7 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
             ) : null}
           </div>
         ))}
-        {busy && <div className="msg assistant typing"><i /><i /><i /></div>}
+        {busy && !msgs.at(-1)?.streaming && <div className="msg assistant typing"><i /><i /><i /></div>}
       </div>
 
       <form className="chat-input" onSubmit={e => { e.preventDefault(); void send(text); }}>

@@ -1,6 +1,6 @@
 # Team workflow
 
-Accept your collaborator invitation, clone this private repository, and follow the README.
+Accept the collaborator invite, clone this private repo, and follow the README quick start.
 
 ```sh
 git switch main
@@ -8,8 +8,9 @@ git pull --ff-only
 git switch -c your-name/short-description
 ```
 
-Make a focused change, run npm test, commit, push your branch, and open a pull request explaining the behavior and checks. Coordinate edits to main.ts and style.css to avoid overlap.
+Make a focused change, run `npm test`, push your branch, and open a pull request that says what changed and how you checked it.
 
-Keep fictional data labeled. Do not commit credentials, .env files, real student records, node_modules, or dist. Retain source evidence for verified academic rules.
-
-Each teammate runs their own dev server. Browser-local saved plans do not travel with Git commits.
+- UI lives in `src/ui/`, styles in `src/styles.css`. Tell the team before large edits to `Roadmap.tsx` or `styles.css` to avoid conflicts.
+- Logic changes in `src/core/` need a test in `tests/`.
+- Never commit real student data, `.cache/`, credentials, `node_modules` or `dist`.
+- Each teammate runs their own dev server, DegreeWorks sign-in and Ollama. Saved plans stay in each browser.

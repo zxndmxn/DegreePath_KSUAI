@@ -13,7 +13,8 @@ Part of the KSU AI Hackathon, alongside [Nudox Lab Ops](https://github.com/zxndm
 | Roadmap built from your real remaining courses and live offerings | Working |
 | What-if: drop, take later, add a course, credit cap, summer | Working, previewed before you apply |
 | Compare and saved plans | Working |
-| Local agent chat (Ollama, Qwen 2.5 3B) | Working, runs on this computer |
+| Local agent chat (Ollama, Qwen 2.5 3B) | Working, runs on this computer, grounded in planner results |
+| Floating assistant with page hints | Working |
 
 ## Quick start
 
@@ -44,7 +45,7 @@ DegreeWorks CLI (dw) ──> local bridge (server/bridge.ts, inside Vite on 127.
 
 - **Planner:** schedules remaining courses term by term using KSU prerequisites (including same-term co-requisites), published offerings and seats, your credit cap and summer choice. Past the published schedule it assumes the same season repeats and marks the course **Watch**.
 - **Colors:** green on track, gold watch, orange moved, red blocked, blue taking now.
-- **Agent:** sees a grade-free summary of your plan and live course facts. It may only propose `drop`, `defer`, `add`, `restore`, credit cap or summer changes. Each proposal shows its verified finish date before you apply it.
+- **Agent:** sees a grade-free summary of your plan and live course facts. When you ask about a drop, delay, credit load or summer, the planner computes the real answer first and the model restates it. It may only propose `drop`, `defer`, `add`, `restore`, credit cap or summer changes, and each proposal shows its verified finish date before you apply it. Answers stream in as they are written.
 
 ## Privacy
 
@@ -55,14 +56,14 @@ DegreeWorks CLI (dw) ──> local bridge (server/bridge.ts, inside Vite on 127.
 ## Tests
 
 ```sh
-npm test   # type-check + 17 tests: audit privacy, prerequisite parsing, scheduling, blocked reasons, agent guardrails
+npm test   # type-check + 20 tests: audit privacy, prerequisite parsing, scheduling, blocked reasons, agent grounding and guardrails
 ```
 
 ## Known limits
 
 - Requirement rules come from DegreeWorks as-is. Choose-from lists show as options to pick, but complex sharing rules are not modeled.
 - Future offerings beyond KSU's published terms are assumptions.
-- Ollama's Vulkan backend returns corrupted text on some AMD laptop GPUs, so the agent runs on CPU by default (about 10 to 15 seconds per answer after warm-up). Set `DEGREEPATH_GPU=1` to try the GPU.
+- Ollama's Vulkan backend returns corrupted text on some AMD laptop GPUs, so the agent runs on CPU by default (first words in about a second, full answer in about 6 to 12 seconds). Set `DEGREEPATH_GPU=1` to try the GPU.
 - Planning only: confirm withdrawals, registration and financial aid with your advisor.
 
 ## Project layout
@@ -71,6 +72,6 @@ npm test   # type-check + 17 tests: audit privacy, prerequisite parsing, schedul
 | --- | --- |
 | `server/bridge.ts` | Local API: status, audit sync, course lookups, agent |
 | `src/core/` | Audit parser, prerequisite parser, planner, agent rules |
-| `src/ui/` | Welcome, Progress, Roadmap, course panel, Compare, Plans, Chat |
+| `src/ui/` | Welcome, Progress, Roadmap, course panel, add-course search, Compare, Plans, Chat, floating assistant |
 | `agent/Modelfile` | The curated `degreepath` model |
 | `tests/` | Node tests on synthetic data only |

@@ -547,3 +547,13 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .course-card strong { font-size: 15px; line-height: 1.3; }
 .course-card small { font-size: 12px; }
 .app:has(.course-panel) .fab-hint { display: none; }
+
+/* light mode: readable gold text */
+[data-theme='light'] .eyebrow, [data-theme='light'] .brand b, [data-theme='light'] .stat.accent strong,
+[data-theme='light'] .rule-pct, [data-theme='light'] .hrs b, [data-theme='light'] .course-panel .eyebrow,
+[data-theme='light'] .welcome-hero em, [data-theme='light'] .chat-head h2 svg, [data-theme='light'] .add-field svg,
+[data-theme='light'] .move-path svg, [data-theme='light'] .fab-hint-body svg, [data-theme='light'] .btn-ask svg,
+[data-theme='light'] .empty-state svg { color: #9a6a00; }
+[data-theme='light'] .stat.accent { background: var(--gold-soft); }
+[data-theme='light'] .course-tag b, [data-theme='light'] .credits b { color: #8a6200; }
+[data-theme='light'] .modal-backdrop { background: rgba(20, 18, 10, 0.35); }

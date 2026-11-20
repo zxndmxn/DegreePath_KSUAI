@@ -60,7 +60,9 @@ export function parseAudit(input: string | unknown): Pathway {
 
   const blocks: RequirementBlock[] = [];
   const open: RuleNeed[] = [];
-  for (const block of rows(audit.blockArray)) {
+  const auditBlocks = rows(audit.blockArray);
+  const normalizedLabel = (value: unknown) => str(value).toLowerCase().replace(/\s+/g, ' ');
+  for (const block of auditBlocks) {
     const title = str(block.title);
     if (!title) continue;
     const ruleSummary: RequirementBlock['rules'] = [];
@@ -68,6 +70,7 @@ export function parseAudit(input: string | unknown): Pathway {
       for (const rule of list) {
         const label = str(rule.label);
         const percent = Math.min(100, num(rule.percentComplete));
+        const children = rows(rule.ruleArray);
         if (depth === 0 && label) ruleSummary.push({ label, percent, done: percent >= 100 });
         if (rule.ruleType === 'Course' && percent < 100) {
           const req = rec(rule.requirement);
@@ -80,16 +83,31 @@ export function parseAudit(input: string | unknown): Pathway {
           const classesLeft = needClasses === null ? null : Math.max(0, needClasses - num(rule.classesApplied));
           const options = [...new Set(rows(req.courseArray).map(c => courseCode(c.discipline, c.number)).filter(Boolean))];
           const id = str(rule.ruleId, 40) || `${title}:${label}`;
+          const coveredByCurrent = rule.inProgressIncomplete === 'Yes' && satisfiedBy.length > 0
+            && (creditsLeft ?? 0) === 0 && (classesLeft ?? 0) === 0;
           if (!open.some(o => o.id === id)) {
             open.push({
               id, label, block: title, percent,
-              credits: rule.inProgressIncomplete === 'Yes' ? 0 : creditsLeft,
-              classes: rule.inProgressIncomplete === 'Yes' ? 0 : classesLeft,
+              credits: creditsLeft, classes: classesLeft,
               options, satisfiedBy,
+              ...(!coveredByCurrent && (creditsLeft ?? 0) === 0 && (classesLeft ?? 0) === 0
+                ? { reviewReason: 'DegreeWorks lists this as incomplete without a remaining course or credit count.' } : {}),
             });
           }
+        } else if (percent < 100 && !children.length && (label || str(rule.ruleType))) {
+          const linkedBlock = rule.ruleType === 'Block' && label && auditBlocks.some(other =>
+            other !== block && rows(other.ruleArray).length > 0 &&
+            (normalizedLabel(other.title) === normalizedLabel(label) || rows(other.ruleArray).some(summary =>
+              summary.ruleType !== 'Block' && normalizedLabel(summary.label) === normalizedLabel(label))));
+          if (linkedBlock) continue;
+          const id = `review:${str(rule.ruleId, 40) || `${title}:${label}`}`;
+          if (!open.some(o => o.id === id)) open.push({
+            id, label: label || title, block: title, percent, credits: null, classes: null,
+            options: [], satisfiedBy: [],
+            reviewReason: 'DegreePath cannot calculate this requirement. Check the rule in DegreeWorks.',
+          });
         }
-        walk(rows(rule.ruleArray), depth + 1);
+        walk(children, depth + 1);
       }
     };
     walk(rows(block.ruleArray), 0);
@@ -115,6 +133,7 @@ export function parseAudit(input: string | unknown): Pathway {
     },
     blocks,
     open,
+    auditReviewVersion: 1,
     completed,
     inProgress,
   };

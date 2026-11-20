@@ -1,6 +1,6 @@
 # DegreePath task status
 
-Updated November 19, 2026.
+Updated November 20, 2026.
 
 ## Done
 
@@ -9,17 +9,20 @@ Updated November 19, 2026.
 - [x] Live KSU prerequisites, offerings and seats through the DegreeWorks CLI, cached locally
 - [x] Planner: drops, deferrals, adds, credit cap, summer, co-requisites, plain-language blocked reasons
 - [x] Progress, Roadmap (side panel), Compare, Saved plans, light and dark themes
-- [x] Local agent (Ollama, Qwen 2.5 3B): streaming answers grounded in planner results, verified action chips
+- [x] Local agent (Ollama, Qwen 2.5 1.5B): streaming answers grounded in planner results, verified action chips
 - [x] Floating assistant with page hints
-- [x] 20 tests on synthetic data
+- [x] 27 tests on synthetic data
 
 ## Next
 
 - [ ] Test with an underclassman's audit (many open requirements, choose-from rules)
 - [ ] Requirement-sharing rules (one course counting for two blocks)
 - [ ] Faster agent on AMD GPUs (Ollama Vulkan currently corrupts output on the RX 6800M)
-- [ ] Package as a one-command launcher for judges
-- [ ] D2L workload context (organizer's d2l-cli) as an optional signal
+- [x] Windows launcher installs from the lockfile
+- [x] Synthetic demo with planner-backed answers
+- [x] D2L workload context for connected users
+- [x] Audit refresh rechecks offerings and flags stale results
+- [x] Unresolved audit rules withhold an estimated finish
 
 ## Known limits
 

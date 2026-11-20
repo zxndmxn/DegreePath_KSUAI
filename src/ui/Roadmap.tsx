@@ -8,13 +8,11 @@ import { AddCourse } from './AddCourse.tsx';
 import { WorkloadBox } from './Workload.tsx';
 import { workloadLine } from '../core/d2l.ts';
 
-export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare: () => void; onAsk: (q: string) => void }) {
+export function Roadmap({ s, onCompare, onAsk, onSave }: { s: DegreePathState; onCompare: () => void; onAsk?: (q: string) => void; onSave: () => void }) {
   const workloadFor = (code: string): ReactNode => s.workload?.courses[code] ? <WorkloadBox work={s.workload.courses[code]} /> : null;
   const [view, setView] = useState<'whatif' | 'baseline'>('whatif');
   const [open, setOpen] = useState<string | null>(null);
   const [explain, setExplain] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [name, setName] = useState('');
   const rows = useRef<Record<string, HTMLElement | null>>({});
   const plan: Plan | null = view === 'baseline' ? s.baseline : s.plan;
   if (!plan || !s.baseline) return null;
@@ -34,6 +32,7 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
   };
   const jump = (label: string) => rows.current[label]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const blockedOpen = open && plan.blocked.some(b => b.code === open);
+  const finishText = (value: Plan) => value.finish ?? (value.unresolved.length ? 'Needs review' : 'Not reachable');
 
   return (
     <main className="page rm">
@@ -41,25 +40,29 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
       <section className="rm-head">
         <div className="rm-finish">
           <span>{changed ? 'Original finish' : 'Projected finish'}</span>
-          <strong>{s.baseline.finish ?? 'Not reachable'}</strong>
+          <strong>{finishText(s.baseline)}</strong>
         </div>
         {changed && <>
           <FlyArrow size={34} playKey={String(s.plan?.finish)} />
           <div className={`rm-finish ${s.plan?.finish === s.baseline.finish ? 'same' : 'changed'}`}>
             <span>With your changes</span>
-            <strong>{s.plan?.finish ?? 'Not reachable'}</strong>
+            <strong>{s.plan ? finishText(s.plan) : 'Needs review'}</strong>
           </div>
         </>}
         <div className="rm-controls">
           <div className="seg" role="group" aria-label="Credit hours per term">
             <span className="seg-label">Credit hrs / term</span>
-            {[12, 15, 18].map(n => <button key={n} className={s.settings.maxCredits === n ? 'on' : ''} onClick={() => s.setSettings({ ...s.settings, maxCredits: n })}>{n}</button>)}
+            {[...new Set([12, 15, 18, s.settings.maxCredits])].sort((a, b) => a - b).map(n => <button key={n} className={s.settings.maxCredits === n ? 'on' : ''} aria-pressed={s.settings.maxCredits === n} onClick={() => s.setSettings({ ...s.settings, maxCredits: n })}>{n}</button>)}
           </div>
           <button className={`toggle ${s.settings.summer ? 'on' : ''}`} onClick={() => s.setSettings({ ...s.settings, summer: !s.settings.summer })} aria-pressed={s.settings.summer}>
             <i /> Summer
           </button>
+          <button className="btn btn-gold" onClick={onSave}><Icon name="bookmark" /> Save plan</button>
         </div>
       </section>
+
+      {s.cachedOfferings && <p className="muted" role="status">Some seats and offerings are from a previous lookup. Refresh DegreeWorks to check again.</p>}
+      {s.courseError && <p className="muted" role="status">{s.courseError}</p>}
 
       {/* The path */}
       <section className="journey" aria-label="Path to graduation">
@@ -72,8 +75,8 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
         ))}
         <span className={`jn grad ${plan.finish ? '' : 'none'}`}>
           <span className="jn-dot"><Icon name="sparkle" size={14} /></span>
-          <span className="jn-term">{plan.finish ? 'Graduate' : 'Not reachable'}</span>
-          <span className="jn-meta">{plan.finish ?? 'Fix blocked courses'}</span>
+          <span className="jn-term">{plan.finish ? 'Graduate' : finishText(plan)}</span>
+          <span className="jn-meta">{plan.finish ?? 'Review blockers and requirements'}</span>
         </span>
       </section>
 
@@ -90,7 +93,6 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
               <button className={view === 'whatif' ? 'on' : ''} onClick={() => setView('whatif')}>What-if</button>
             </div>
             <button className="btn btn-soft" onClick={onCompare}><Icon name="compare" /> Compare</button>
-            <button className="btn btn-gold" onClick={() => setSaving(true)}><Icon name="bookmark" /> Save plan</button>
             <button className="btn btn-ghost" onClick={s.reset}><Icon name="refresh" /> Reset</button>
           </div>
         </section>
@@ -112,16 +114,17 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
 
       {plan.unresolved.length > 0 && (
         <section className="panel choose-panel">
-          <header className="panel-head"><h2>Pick a course for these requirements</h2></header>
+          <header className="panel-head"><h2>Requirements to review</h2></header>
           {plan.unresolved.map(r => (
             <div key={r.id} className="choose-row">
               <strong>{r.label}</strong>
-              <div className="chips">
+              {r.reviewReason ? <p className="muted">{r.reviewReason}</p> : !r.options.length
+                ? <p className="muted">Check DegreeWorks for eligible courses.</p> : <div className="chips">
                 {r.options.slice(0, 12).map(code => (
                   <button key={code} className={`chip-btn ${s.edits.choose[r.id]?.includes(code) ? 'on' : ''}`}
                     onClick={() => s.setEdits({ ...s.edits, choose: { ...s.edits.choose, [r.id]: [code] } })}>{code}{s.catalog[code]?.title && <small>{s.catalog[code]!.title}</small>}</button>
                 ))}
-              </div>
+              </div>}
             </div>
           ))}
         </section>
@@ -169,7 +172,7 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
       <section className="roadmap-foot">
         <AddCourse s={s} />
         <div className="foot-links">
-          <button className="link" onClick={() => onAsk('Can I graduate any sooner?')}><Icon name="sparkle" size={15} /> Ask how to finish sooner</button>
+          {onAsk && <button className="link" onClick={() => onAsk('Can I graduate any sooner?')}><Icon name="sparkle" size={15} /> Ask how to finish sooner</button>}
           <button className="link" onClick={() => setExplain(true)}><Icon name="info" size={15} /> How this is calculated</button>
         </div>
       </section>
@@ -187,14 +190,6 @@ export function Roadmap({ s, onCompare, onAsk }: { s: DegreePathState; onCompare
         </Modal>
       )}
 
-      {saving && (
-        <Modal title="Save this plan" onClose={() => setSaving(false)}>
-          <form className="save-form" onSubmit={e => { e.preventDefault(); s.savePlan(name.trim() || `Plan · ${s.plan?.finish ?? 'draft'}`); setSaving(false); setName(''); }}>
-            <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Lighter spring" maxLength={60} />
-            <button className="btn btn-gold" type="submit"><Icon name="bookmark" /> Save</button>
-          </form>
-        </Modal>
-      )}
     </main>
   );
 }

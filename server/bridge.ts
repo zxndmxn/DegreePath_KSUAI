@@ -70,12 +70,12 @@ export function degreePathBridge(root: string): Plugin {
     await writeFile(cacheFile, JSON.stringify(cache));
   }
 
-  async function lookUp(codes: string[]): Promise<Record<string, CourseInfo | null>> {
+  async function lookUp(codes: string[], refresh: boolean): Promise<Record<string, CourseInfo | null>> {
     const c = await loadCache();
     const out: Record<string, CourseInfo | null> = {};
     const todo = codes.filter(code => {
       const hit = c[code];
-      if (hit !== undefined && (!hit || Date.now() - Date.parse(hit.fetchedAt) < TTL_MS)) { out[code] = hit; return false; }
+      if (!refresh && hit && Date.now() - Date.parse(hit.fetchedAt) < TTL_MS) { out[code] = hit; return false; }
       return true;
     });
     let changed = false;
@@ -84,7 +84,7 @@ export function degreePathBridge(root: string): Plugin {
         const code = todo.shift()!;
         const [subj, num] = code.split(' ');
         try { out[code] = c[code] = parseCourseInfo(await fetchCourse(subj, num), code); }
-        catch { out[code] = c[code] ?? null; }
+        catch { out[code] = c[code] ? { ...c[code], stale: true } : null; }
         changed = true;
       }
     };
@@ -177,9 +177,9 @@ export function degreePathBridge(root: string): Plugin {
         catch (e) { const r = errorReply(e); return send(r.status, r.data); }
       }
       if (url === '/api/courses' && req.method === 'POST') {
-        const { codes } = (await body(req)) as { codes?: unknown };
+        const { codes, refresh } = (await body(req)) as { codes?: unknown; refresh?: unknown };
         const list = Array.isArray(codes) ? [...new Set(codes.filter((c): c is string => typeof c === 'string' && CODE.test(c)))].slice(0, 60) : [];
-        return send(200, { courses: await lookUp(list) });
+        return send(200, { courses: await lookUp(list, refresh === true) });
       }
       if (url === '/api/agent/warm' && req.method === 'POST') {
         // Evaluates the system prompt and student context once so the next question only adds a few tokens.

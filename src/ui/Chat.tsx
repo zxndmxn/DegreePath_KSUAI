@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DegreePathState } from '../store.ts';
 import { api, type BridgeStatus } from '../api.ts';
-import { applyAction, buildContext, describeAction, groundQuestion, type AgentAction } from '../core/agent.ts';
+import { applyAction, buildContext, describeAction, groundQuestionResult, type AgentAction } from '../core/agent.ts';
 import { Icon } from './bits.tsx';
 import { dueWithin, shortDate } from '../core/d2l.ts';
 
@@ -15,13 +15,15 @@ const STARTERS = [
   'Make my next semester lighter',
 ];
 
-export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
-  { s: DegreePathState; status: BridgeStatus | null; open: boolean; onClose: () => void; seed: string | null; onSeedUsed: () => void }) {
+export function Chat({ s, status, open, onClose, seed, onSeedUsed, demo = false }:
+  { s: DegreePathState; status: BridgeStatus | null; open: boolean; onClose: () => void; seed: string | null; onSeedUsed: () => void; demo?: boolean }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const online = !!status?.agent.running && !!status.agent.model;
+
+  const canAnswer = online || demo;
 
   useEffect(() => { scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' }); }, [msgs, busy]);
   useEffect(() => { if (open && seed) { void send(seed); onSeedUsed(); } }, [open, seed]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -41,13 +43,35 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
   async function send(q: string) {
     const question = q.trim();
     if (!question || busy || !s.plan) return;
-    const plannerFact = groundQuestion(question, p, s.catalog, s.edits, s.settings);
+    const verified = groundQuestionResult(question, p, s.catalog, s.edits, s.settings);
+    if (demo) {
+      setText('');
+      setMsgs([...msgs, { role: 'user', content: question }, {
+        role: 'assistant',
+        content: verified?.reply ?? 'Try asking about dropping the capstone or changing the credit limit.',
+        actions: verified?.actions,
+        applied: verified?.actions.map(() => false),
+      }]);
+      return;
+    }
     let dueFact: string | null = null;
     if (s.workload && /\b(due|deadline|assignment|homework|quiz|exam|this week|busy|workload)\b/i.test(question)) {
       const week = dueWithin(s.workload, 7);
       dueFact = week.length ? `Due in the next 7 days on D2L: ${week.map(i => `${i.code} ${i.title} (${shortDate(i.due)})`).join('; ')}.` : 'Nothing is due on D2L in the next 7 days.';
     }
-    const fact = [plannerFact, dueFact].filter(Boolean).join(' ') || null;
+    if (verified?.actions.length || (verified && /\b(drop|withdraw|credit|credits)\b/i.test(question))) {
+      setText('');
+      setMsgs([...msgs, { role: 'user', content: question }, {
+        role: 'assistant', content: verified.reply, actions: verified.actions, applied: verified.actions.map(() => false),
+      }]);
+      return;
+    }
+    if (dueFact && /^(what(?:'s| is) due|show (?:me )?(?:what(?:'s| is) )?due) (?:this week|in the next 7 days)[?.!]*$/i.test(question)) {
+      setText('');
+      setMsgs([...msgs, { role: 'user', content: question }, { role: 'assistant', content: dueFact }]);
+      return;
+    }
+    const fact = [verified?.reply, dueFact].filter(Boolean).join(' ') || null;
     const next: Msg[] = [...msgs, { role: 'user', content: question, sent: fact ? `${question}\n\n[PLANNER RESULT, verified, restate it: ${fact}]` : question }];
     setMsgs(next); setText(''); setBusy(true);
     try {
@@ -82,7 +106,7 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
       <header className="chat-head">
         <div>
           <h2><Icon name="sparkle" size={18} /> Ask DegreePath</h2>
-          <span className={`status-dot ${online ? 'on' : 'off'}`}>{!online ? (settingUp(status) ? 'Setting up…' : 'Agent offline') : warm === 'warming' ? 'Reading your plan…' : `Local agent · ${status!.agent.model} · on this computer`}</span>
+          <span className={`status-dot ${online ? 'on' : 'off'}`}>{demo ? 'Sample mode · planner answers' : !online ? (settingUp(status) ? 'Setting up…' : 'Agent offline') : warm === 'warming' ? 'Reading your plan…' : `Local agent · ${status!.agent.model} · on this computer`}</span>
         </div>
         <button className="icon-btn big" onClick={onClose} aria-label="Close assistant"><Icon name="close" size={22} /></button>
       </header>
@@ -90,10 +114,10 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
       <div className="chat-body" ref={scroller}>
         {msgs.length === 0 && (
           <div className="chat-empty">
-            <p>I know your audit, your roadmap and the live KSU schedule. Ask anything about your path. Every change I suggest is checked by the planner before you apply it.</p>
-            {!online && <p className="chat-offline">{setupNote(status)}</p>}
+            <p>{demo ? 'Ask what happens if you change the sample plan. Answers come from the planner.' : 'I can answer questions using your audit, roadmap and KSU schedule. Suggested changes are checked by the planner before you apply them.'}</p>
+            {!canAnswer && <p className="chat-offline">{setupNote(status)}</p>}
             <div className="starter-grid">
-              {STARTERS.map(q => <button key={q} className="starter" disabled={!online} onClick={() => void send(q)}>{q}</button>)}
+              {(demo ? STARTERS.slice(2) : STARTERS).map(q => <button key={q} className="starter" disabled={!canAnswer} onClick={() => void send(q)}>{q}</button>)}
             </div>
           </div>
         )}
@@ -116,8 +140,8 @@ export function Chat({ s, status, open, onClose, seed, onSeedUsed }:
       </div>
 
       <form className="chat-input" onSubmit={e => { e.preventDefault(); void send(text); }}>
-        <input value={text} onChange={e => setText(e.target.value)} placeholder={online ? 'Ask about your path…' : settingUp(status) ? 'Assistant is setting up…' : 'Agent offline'} disabled={!online || busy} maxLength={600} />
-        <button className="send" type="submit" disabled={!online || busy || !text.trim()} aria-label="Send"><Icon name="send" size={18} /></button>
+        <input value={text} onChange={e => setText(e.target.value)} placeholder={canAnswer ? 'Ask about your path…' : settingUp(status) ? 'Assistant is setting up…' : 'Agent offline'} disabled={!canAnswer || busy} maxLength={600} />
+        <button className="send" type="submit" disabled={!canAnswer || busy || !text.trim()} aria-label="Send"><Icon name="send" size={18} /></button>
       </form>
     </aside>
   );

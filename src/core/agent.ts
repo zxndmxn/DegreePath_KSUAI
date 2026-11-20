@@ -224,6 +224,10 @@ function nextAfter(term: string, summer: boolean): string {
 // Finds the change a question is about and computes its real outcome with the planner,
 // so the model phrases a verified answer instead of inventing dates.
 export function groundQuestion(question: string, p: Pathway, catalog: Catalog, edits: PlanEdits, settings: PlanSettings): string | null {
+  return groundQuestionResult(question, p, catalog, edits, settings)?.reply ?? null;
+}
+
+export function groundQuestionResult(question: string, p: Pathway, catalog: Catalog, edits: PlanEdits, settings: PlanSettings): AgentReply | null {
   const q = question.toLowerCase();
   const compact = q.replace(/\s+/g, '');
   const plan = buildPlan(p, catalog, edits, settings);
@@ -234,31 +238,46 @@ export function groundQuestion(question: string, p: Pathway, catalog: Catalog, e
     titleHit(title, q));
   const outcome = (e: PlanEdits, st: PlanSettings) => {
     const r = buildPlan(p, catalog, e, st);
-    if (!r.finish) return `graduation is not reachable (${r.blocked.map(b => `${b.code}: ${b.reason}`).join('; ')})`;
+    if (!r.finish) {
+      const reasons = [...r.blocked.map(b => `${b.code}: ${b.reason}`), ...r.unresolved.map(rule =>
+        rule.reviewReason ? `${rule.label}: ${rule.reviewReason}` : `choose a course for ${rule.label}`)];
+      return reasons.length ? `graduation is not reachable (${reasons.join('; ')})` : 'the planner cannot project a finish';
+    }
     return r.finish === plan.finish ? `graduation stays ${r.finish} (no change)` : `graduation moves to ${r.finish}`;
   };
   const facts: string[] = [];
+  const actions: AgentAction[] = [];
   const now = plan.finish ? `Current finish is ${plan.finish}.` : 'Graduation is currently not reachable.';
   const wantsDrop = /\b(drop|withdraw|remove|quit|skip|fail)\b/.test(q);
   const wantsLater = /\b(later|delay|postpone|push|defer|move|wait|next (semester|term|year))\b/.test(q);
   for (const [code, title] of mentioned.slice(0, 2)) {
     const where = placed.get(code);
-    if (wantsDrop || (!wantsLater && where?.now)) {
+    if (wantsDrop) {
       if (p.inProgress.some(c => c.code === code)) {
         const e = { ...edits, drop: [...new Set([...edits.drop, code])] };
         let f = `If the student drops ${code} ${title}, ${outcome(e, settings)}.`;
-        if (!settings.summer) { const w = outcome(e, { ...settings, summer: true }); if (w !== outcome(e, settings)) f += ` If they also allow summer terms, ${w}.`; }
+        if (!edits.drop.includes(code)) actions.push({ type: 'drop', code });
+        if (!settings.summer) {
+          const summerSettings = { ...settings, summer: true };
+          const withSummer = buildPlan(p, catalog, e, summerSettings);
+          if (withSummer.finish && withSummer.finish !== buildPlan(p, catalog, e, settings).finish) {
+            f += ` With that drop and summer terms enabled, the projected finish is ${withSummer.finish}.`;
+          }
+        }
         facts.push(f);
       }
     }
     if (wantsLater && where) {
-      const after = buildPlan(p, catalog, { ...edits, defer: { ...edits.defer, [code]: nextLabel(where.term) } }, settings);
       const e = { ...edits, defer: { ...edits.defer, [code]: nextLabel(where.term) }, drop: where.now ? [...new Set([...edits.drop, code])] : edits.drop };
-      facts.push(`If ${code} waits until ${nextLabel(where.term)} or later, ${outcome(e, settings)}.${after ? '' : ''}`);
+      facts.push(`If ${code} waits until ${nextLabel(where.term)} or later, ${outcome(e, settings)}.`);
     }
   }
   const credit = /\b(\d{1,2})\s*(credit|hour|hrs)/.exec(q);
-  if (credit && +credit[1] >= 6 && +credit[1] <= 21) facts.push(`At ${credit[1]} credit hours per term, ${outcome(edits, { ...settings, maxCredits: +credit[1] })}.`);
+  if (credit && +credit[1] >= 6 && +credit[1] <= 21) {
+    const maxCredits = +credit[1];
+    facts.push(`At ${maxCredits} credit hours per term, ${outcome(edits, { ...settings, maxCredits })}.`);
+    if (maxCredits !== settings.maxCredits) actions.push({ type: 'maxCredits', value: maxCredits });
+  }
   else if (/\blighter\b|\bfewer\b|\bless\b/.test(q)) facts.push(`At 12 credit hours per term, ${outcome(edits, { ...settings, maxCredits: 12 })}.`);
   if (/\bsummer\b/.test(q) && !settings.summer) facts.push(`With summer terms allowed, ${outcome(edits, { ...settings, summer: true })}.`);
   if (/\bsooner\b|\bfaster\b|\bearlier\b/.test(q)) {
@@ -267,7 +286,7 @@ export function groundQuestion(question: string, p: Pathway, catalog: Catalog, e
     facts.push(best.length ? `Options: ${best.map(x => `${x.st.maxCredits} credit hrs${x.st.summer ? ' with summer' : ''} finishes ${x.r.finish}`).join('; ')}.` : 'No faster option exists with these courses.');
   }
   if (!facts.length) return null;
-  return `${now} ${facts.join(' ')}`;
+  return { reply: `${now} ${facts.join(' ')}`, actions };
 }
 
 function nextLabel(term: string): string {

@@ -26,7 +26,11 @@ Needs Node.js 22.18+ and Microsoft Edge or Google Chrome (every Windows PC has E
 
 **The assistant sets itself up.** The first time you launch, DegreePath installs [Ollama](https://ollama.com) if it is missing (via winget on Windows) and downloads Qwen 2.5 1.5B (about 1 GB) in the background. The app is usable the whole time and the chat shows progress. Skip it with `DEGREEPATH_NO_AI=1`. `npm run agent:setup` does the same thing by hand.
 
-Developers can also run `npm install --include=dev` then `npm run dev`. On Windows, if PowerShell blocks `npm`, use `cmd /c npm ...`.
+Developers can also run `npm ci --include=dev` then `npm run dev`. On Windows, if PowerShell blocks `npm`, use `cmd /c npm ...`.
+
+## Demo without sign-in
+
+Start DegreePath, then open [the synthetic demo](http://127.0.0.1:4173/?demo=1). Choose **Roadmap**, select **IT 4983**, and preview **Drop it this term**. **Ask DegreePath** can answer the same question in sample mode using the planner. Sample edits and saves last until reload.
 
 ## How it works
 
@@ -53,12 +57,12 @@ KSU DegreeWorks + D2L ──> built-in connector (server/ksu.ts) ──> local b
 ## Tests
 
 ```sh
-npm test   # type-check + 24 tests: audit privacy, prerequisite parsing, scheduling, blocked reasons, agent grounding and guardrails
+npm test   # type-check + 27 tests: audit privacy, prerequisite parsing, scheduling, blocked reasons, agent grounding and guardrails
 ```
 
 ## Known limits
 
-- Requirement rules come from DegreeWorks as-is. Choose-from lists show as options to pick, but complex sharing rules are not modeled.
+- Choose-from lists let you pick among listed options. Unresolved audit rules can prevent a finish projection. Plans from older audit imports may need a refresh. A course lookup failure marks cached offerings as stale.
 - Future offerings beyond KSU's published terms are assumptions.
 - Ollama's Vulkan backend returns corrupted text on some AMD laptop GPUs, so the assistant runs on CPU by default (about 4 seconds per answer). Set `DEGREEPATH_GPU=1` to try the GPU.
 - Planning only: confirm withdrawals, registration and financial aid with your advisor.

@@ -16,8 +16,17 @@ interface Need { code: string; title: string; credits: number; ruleLabel?: strin
 // eligible options that are actually offered, until the rule's credits are covered.
 export function pickForRules(p: Pathway, edits: PlanEdits, catalog: Catalog, taken: Set<string>): { picks: Need[]; unresolved: RuleNeed[] } {
   const picks: Need[] = [];
-  const unresolved: RuleNeed[] = [];
-  for (const rule of openCourseNeeds(p)) {
+  const unresolved: RuleNeed[] = p.open.filter(rule => rule.reviewReason);
+  if (p.percent < 100 && (!p.auditReviewVersion || !p.open.length)) {
+    unresolved.push({
+      id: 'audit-review', label: 'Degree audit', block: '', percent: p.percent,
+      credits: null, classes: null, options: [], satisfiedBy: [],
+      reviewReason: p.auditReviewVersion
+        ? 'The audit reports incomplete progress without a requirement the planner can schedule.'
+        : 'Refresh DegreeWorks to check the requirements in this older saved audit.',
+    });
+  }
+  for (const rule of openCourseNeeds(p).filter(rule => !rule.reviewReason)) {
     const chosen = edits.choose[rule.id];
     const pool = (chosen?.length ? chosen : rule.options).filter(c => !taken.has(c) && !picks.some(x => x.code === c));
     const ranked = chosen?.length ? pool : [...pool].sort((a, b) => offeredScore(catalog[b]) - offeredScore(catalog[a]));
@@ -171,7 +180,7 @@ function blockReason(code: string, info: CourseInfo | undefined, edits: PlanEdit
   return 'Offerings and prerequisites never line up';
 }
 
-export interface Move { code: string; title: string; from: string | null; to: string | null }
+export interface Move { code: string; title: string; from: string | null; to: string | null; wasBlocked: boolean; isBlocked: boolean }
 
 export function diffPlans(base: Plan, next: Plan): Move[] {
   const where = (plan: Plan) => {
@@ -187,7 +196,11 @@ export function diffPlans(base: Plan, next: Plan): Move[] {
   for (const code of codes) {
     const from = a.get(code)?.term || null;
     const to = b.get(code)?.term || null;
-    if (from !== to) moves.push({ code, title: b.get(code)?.title ?? a.get(code)?.title ?? code, from, to });
+    const wasBlocked = a.get(code)?.term === '';
+    const isBlocked = b.get(code)?.term === '';
+    if (from !== to || wasBlocked !== isBlocked) {
+      moves.push({ code, title: b.get(code)?.title ?? a.get(code)?.title ?? code, from, to, wasBlocked, isBlocked });
+    }
   }
   return moves;
 }

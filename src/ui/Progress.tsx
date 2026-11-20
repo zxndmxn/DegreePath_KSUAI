@@ -4,7 +4,7 @@ import { compareTerms } from '../core/terms.ts';
 import { Credits, Icon, Ring, coverageColor } from './bits.tsx';
 import { dueWithin, shortDate, workloadLine } from '../core/d2l.ts';
 
-export function Progress({ s, onRoadmap, onRefresh, refreshing }: { s: DegreePathState; onRoadmap: () => void; onRefresh: () => void; refreshing: boolean }) {
+export function Progress({ s, onRoadmap, onRefresh, refreshing }: { s: DegreePathState; onRoadmap: () => void; onRefresh?: () => void; refreshing: boolean }) {
   const p = s.pathway!;
   const [open, setOpen] = useState<string | null>(null);
   const blocks = useMemo(() => [...p.blocks].sort((a, b) => a.percent - b.percent), [p.blocks]);
@@ -29,13 +29,13 @@ export function Progress({ s, onRoadmap, onRefresh, refreshing }: { s: DegreePat
           <div className="stat-row">
             <div className="stat"><span>Credit hrs applied</span><strong>{p.credits.applied}</strong></div>
             <div className="stat"><span>Credit hrs in progress</span><strong>{p.credits.inProgress}</strong></div>
-            <div className="stat accent"><span>Projected finish</span><strong>{finish ?? 'Needs a plan'}</strong></div>
+            <div className="stat accent"><span>Projected finish</span><strong>{finish ?? (s.baseline?.unresolved.length ? 'Needs review' : 'Needs a plan')}</strong></div>
           </div>
           <div className="hero-actions">
             <button className="btn btn-gold btn-lg" onClick={onRoadmap}><Icon name="map" /> Open my roadmap</button>
-            <button className="btn btn-soft" onClick={onRefresh} disabled={refreshing}>
+            {onRefresh && <button className="btn btn-soft" onClick={onRefresh} disabled={refreshing}>
               <Icon name="refresh" className={refreshing ? 'spin' : ''} /> {refreshing ? 'Refreshing…' : 'Refresh from DegreeWorks'}
-            </button>
+            </button>}
           </div>
         </div>
       </section>

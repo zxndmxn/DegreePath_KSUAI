@@ -1,0 +1,207 @@
+{
+  "pathway": {
+    "source": "DegreeWorks",
+    "importedAt": "2026-11-20T12:00:00.000Z",
+    "program": "Bachelor of Science in IT",
+    "catalog": "2023",
+    "concentration": "Cyber Operations Security",
+    "major": "BSIT-Information Technology",
+    "level": "Senior",
+    "activeTerm": "Fall 2026",
+    "percent": 92,
+    "credits": {
+      "applied": 110,
+      "inProgress": 6,
+      "transfer": 20
+    },
+    "blocks": [
+      {
+        "title": "Degree: BS IT",
+        "percent": 92,
+        "rules": [
+          {
+            "label": "Major Requirements",
+            "percent": 92,
+            "done": false
+          }
+        ]
+      },
+      {
+        "title": "Major in IT",
+        "percent": 92,
+        "rules": [
+          {
+            "label": "MAJOR REQUIREMENTS",
+            "percent": 92,
+            "done": false
+          }
+        ]
+      }
+    ],
+    "open": [
+      {
+        "id": "r-cap",
+        "label": "IT Capstone",
+        "block": "Major in IT",
+        "percent": 98,
+        "credits": 0,
+        "classes": null,
+        "options": [
+          "IT 4983"
+        ],
+        "satisfiedBy": [
+          "IT 4983"
+        ]
+      },
+      {
+        "id": "r-elec",
+        "label": "Elective Courses - 3 Credits",
+        "block": "Major in IT",
+        "percent": 0,
+        "credits": 3,
+        "classes": null,
+        "options": [
+          "IT 4833",
+          "IT 4893"
+        ],
+        "satisfiedBy": []
+      }
+    ],
+    "auditReviewVersion": 1,
+    "completed": [
+      {
+        "code": "IT 3203",
+        "title": "Intro to Web",
+        "credits": 3,
+        "term": "Fall 2025"
+      },
+      {
+        "code": "IT 3423",
+        "title": "Ops Security",
+        "credits": 3,
+        "term": "Spring 2026"
+      },
+      {
+        "code": "IT 4323",
+        "title": "Data Comm",
+        "credits": 3,
+        "term": "Spring 2026"
+      }
+    ],
+    "inProgress": [
+      {
+        "code": "IT 4823",
+        "title": "Information Sec. Admin",
+        "credits": 3,
+        "term": "Fall 2026"
+      },
+      {
+        "code": "IT 4983",
+        "title": "IT Capstone Project",
+        "credits": 3,
+        "term": "Fall 2026"
+      }
+    ]
+  },
+  "catalog": {
+    "IT 4983": {
+      "code": "IT 4983",
+      "title": "IT Capstone Project",
+      "credits": 3,
+      "prereq": {
+        "kind": "and",
+        "items": [
+          {
+            "kind": "course",
+            "code": "IT 3423",
+            "concurrent": false
+          },
+          {
+            "kind": "course",
+            "code": "IT 4323",
+            "concurrent": true
+          },
+          {
+            "kind": "course",
+            "code": "IT 4823",
+            "concurrent": true
+          }
+        ]
+      },
+      "offered": [
+        "Spring 2027"
+      ],
+      "seats": {
+        "Spring 2027": 10
+      },
+      "fetchedAt": "2026-11-20T12:00:00.000Z"
+    },
+    "IT 4823": {
+      "code": "IT 4823",
+      "title": "Information Sec. Admin",
+      "credits": 3,
+      "prereq": {
+        "kind": "or",
+        "items": [
+          {
+            "kind": "course",
+            "code": "CSE 2300",
+            "concurrent": false
+          },
+          {
+            "kind": "course",
+            "code": "MATH 2345",
+            "concurrent": false
+          }
+        ]
+      },
+      "offered": [
+        "Spring 2027",
+        "Summer 2027"
+      ],
+      "seats": {
+        "Spring 2027": 10,
+        "Summer 2027": 5
+      },
+      "fetchedAt": "2026-11-20T12:00:00.000Z"
+    },
+    "IT 4833": {
+      "code": "IT 4833",
+      "title": "Wireless Security",
+      "credits": 3,
+      "prereq": {
+        "kind": "or",
+        "items": [
+          {
+            "kind": "course",
+            "code": "IT 4323",
+            "concurrent": false
+          },
+          {
+            "kind": "course",
+            "code": "ECET 3400",
+            "concurrent": false
+          }
+        ]
+      },
+      "offered": [
+        "Spring 2027"
+      ],
+      "seats": {
+        "Spring 2027": 2
+      },
+      "fetchedAt": "2026-11-20T12:00:00.000Z"
+    },
+    "IT 4893": {
+      "code": "IT 4893",
+      "title": "Pen Testing",
+      "credits": 3,
+      "prereq": {
+        "kind": "none"
+      },
+      "offered": [],
+      "seats": {},
+      "fetchedAt": "2026-11-20T12:00:00.000Z"
+    }
+  }
+}

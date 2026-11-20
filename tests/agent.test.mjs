@@ -3,11 +3,21 @@ import assert from 'node:assert/strict';
 import { parseAudit } from '../src/core/audit.ts';
 import { parseCourseInfo } from '../src/core/catalog.ts';
 import { buildPlan, defaultSettings, emptyEdits } from '../src/core/plan.ts';
-import { applyAction, buildContext, groundQuestion, looksBroken, partialReply, validateAgentReply } from '../src/core/agent.ts';
+import { applyAction, buildContext, groundQuestion, groundQuestionResult, looksBroken, partialReply, validateAgentReply } from '../src/core/agent.ts';
 import { audit, courseRaw } from './fixtures.mjs';
 
 const p = parseAudit(audit);
 const catalog = Object.fromEntries(Object.entries(courseRaw).map(([c, raw]) => [c, parseCourseInfo(raw, c)]));
+
+test('asked-for credit limits and named drops return only the corresponding planner actions', () => {
+  const settings = defaultSettings();
+  const edits = emptyEdits();
+  const credits = groundQuestionResult('What if I take 21 credits next term?', p, catalog, edits, settings);
+  assert.match(credits.reply, /At 21 credit hours per term/);
+  assert.deepEqual(credits.actions, [{ type: 'maxCredits', value: 21 }]);
+  const drop = groundQuestionResult('What happens if I drop my capstone?', p, catalog, edits, settings);
+  assert.deepEqual(drop.actions, [{ type: 'drop', code: 'IT 4983' }]);
+});
 
 test('agent replies are parsed, normalized and stripped of unsafe actions', () => {
   const r = validateAgentReply(JSON.stringify({ reply: 'Try this.', actions: [

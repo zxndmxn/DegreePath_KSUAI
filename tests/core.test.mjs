@@ -3,6 +3,14 @@ import assert from 'node:assert/strict';
 import { parseAudit } from '../src/core/audit.ts';
 import { parseCourseInfo, parsePrereqRows, prereqText } from '../src/core/catalog.ts';
 import { buildPlan, defaultSettings, diffPlans, emptyEdits } from '../src/core/plan.ts';
+
+test('a newly added blocked course appears in the comparison changes', () => {
+  const original = { terms: [], blocked: [] };
+  const whatIf = { terms: [], blocked: [{ code: 'IT 4403', title: 'Advanced Web and Mobile App' }] };
+  assert.deepEqual(diffPlans(original, whatIf), [{
+    code: 'IT 4403', title: 'Advanced Web and Mobile App', from: null, to: null, wasBlocked: false, isBlocked: true,
+  }]);
+});
 import { nextTerm } from '../src/core/terms.ts';
 import { audit, courseRaw } from './fixtures.mjs';
 
@@ -29,6 +37,15 @@ test('open rules separate in-progress coverage from real gaps and strip wildcard
   assert.deepEqual(cap.satisfiedBy, ['IT 4983']);
   assert.equal(elec.credits, 3);
   assert.deepEqual(elec.options, ['IT 4833', 'IT 4893']);
+});
+
+test('unmodeled audit requirements and incomplete older snapshots withhold graduation dates', () => {
+  const raw = structuredClone(audit);
+  raw.blockArray[0].ruleArray.push({ ruleType: 'Credits', label: 'Remaining program credits', percentComplete: '50' });
+  const plan = buildPlan(parseAudit(raw), catalog, emptyEdits(), defaultSettings());
+  assert.equal(plan.finish, null);
+  assert.equal(plan.unresolved.find(rule => rule.label === 'Remaining program credits')?.reviewReason?.includes('DegreeWorks'), true);
+  assert.equal(buildPlan({ ...pathway, auditReviewVersion: undefined }, catalog, emptyEdits(), defaultSettings()).finish, null);
 });
 
 test('banner prerequisite rows become a boolean tree', () => {

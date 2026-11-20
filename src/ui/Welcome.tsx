@@ -40,7 +40,8 @@ export function Welcome({ status, onLoaded }: { status: BridgeStatus | null; onL
       <div className="welcome-hero">
         <span className="eyebrow"><Icon name="sparkle" size={14} /> KSU degree planner</span>
         <h1>See every path<br />to your <em>graduation.</em></h1>
-        <p>Bring in your DegreeWorks audit. DegreePath maps what is left against the live KSU schedule, then lets you try drops, delays and adds before you commit.</p>
+        <p>Bring in your DegreeWorks audit. DegreePath maps what is left against the KSU schedule, then lets you try drops, delays and adds before you commit.</p>
+        <p><a className="link" href="?demo=1">Open the sample demo</a></p>
       </div>
 
       <div className="welcome-cards">

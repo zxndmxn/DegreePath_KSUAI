@@ -23,6 +23,7 @@ export interface RuleNeed {
   classes: number | null;   // classes still required, when stated
   options: string[];        // eligible course codes (wildcards removed)
   satisfiedBy: string[];    // in-progress codes that complete this rule
+  reviewReason?: string;    // requirement the planner cannot resolve
 }
 
 export interface RequirementBlock {
@@ -44,6 +45,7 @@ export interface Pathway {
   credits: { applied: number; inProgress: number; transfer: number };
   blocks: RequirementBlock[];
   open: RuleNeed[];              // unfinished rules
+  auditReviewVersion?: 1;
   completed: Course[];
   inProgress: Course[];
 }
@@ -61,6 +63,7 @@ export interface CourseInfo {
   offered: string[];        // published terms with sections, e.g. ["Spring 2027"]
   seats: Record<string, number>; // open seats per published term
   fetchedAt: string;
+  stale?: boolean;          // last known details after a failed refresh
 }
 
 export interface PlanEdits {

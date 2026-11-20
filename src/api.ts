@@ -20,8 +20,8 @@ export const api = {
   workload: (refresh = false) => call<Workload>(`/api/d2l${refresh ? '?refresh=1' : ''}`),
   connect: () => call<{ ok: boolean; degreeworks: boolean; d2l: boolean }>('/api/connect', { method: 'POST', body: '{}' }),
   syncAudit: () => call<{ pathway: Pathway }>('/api/audit/sync', { method: 'POST', body: '{}' }).then(r => r.pathway),
-  courses: (codes: string[]) =>
-    call<{ courses: Record<string, CourseInfo | null> }>('/api/courses', { method: 'POST', body: JSON.stringify({ codes }) }).then(r => r.courses),
+  courses: (codes: string[], refresh = false) =>
+    call<{ courses: Record<string, CourseInfo | null> }>('/api/courses', { method: 'POST', body: JSON.stringify({ codes, refresh }) }).then(r => r.courses),
   warmAgent: (context: string) => call<{ warmedMs: number }>('/api/agent/warm', { method: 'POST', body: JSON.stringify({ context }) }),
   agentStream: async (messages: { role: 'user' | 'assistant'; content: string }[], context: string, onText: (text: string) => void): Promise<AgentReply> => {
     const res = await fetch('/api/agent?stream=1', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, context }) });

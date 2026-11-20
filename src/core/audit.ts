@@ -95,10 +95,10 @@ export function parseAudit(input: string | unknown): Pathway {
             });
           }
         } else if (percent < 100 && !children.length && (label || str(rule.ruleType))) {
-          const linkedBlock = rule.ruleType === 'Block' && label && auditBlocks.some(other =>
-            other !== block && rows(other.ruleArray).length > 0 &&
-            (normalizedLabel(other.title) === normalizedLabel(label) || rows(other.ruleArray).some(summary =>
-              summary.ruleType !== 'Block' && normalizedLabel(summary.label) === normalizedLabel(label))));
+          // A Block rule points at another block in the audit (for example "Major Requirements" -> the major
+          // block). That block's own rules carry the real requirements, so the pointer is not a separate gap.
+          const linkedBlock = /^block/i.test(str(rule.ruleType)) && auditBlocks.some(other =>
+            other !== block && rows(other.ruleArray).length > 0);
           if (linkedBlock) continue;
           const id = `review:${str(rule.ruleId, 40) || `${title}:${label}`}`;
           if (!open.some(o => o.id === id)) open.push({
